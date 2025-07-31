@@ -4,26 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from data_fetcher import fetch_ohlcv
 from formation_detector import find_all_tobo, find_all_obo, detect_falling_wedge, calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands, calculate_stochastic, calculate_adx, analyze_all_formations, analyze_all_formations_advanced, detect_cup_and_handle, detect_bullish_bearish_flag_advanced, detect_rising_wedge, calculate_ichimoku, calculate_supertrend, calculate_vwap, calculate_obv, calculate_heikin_ashi
 # from bot import format_price  # bot.py dosyası yok, bot_backup.py var
-try:
-    import msvcrt
-except ImportError:
-    # Linux/Unix sistemler için
-    import sys
-    import tty
-    import termios
-    
-    def msvcrt_getch():
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-    
-    def msvcrt_kbhit():
-        return False  # Linux'ta basit implementasyon
+import msvcrt
 import pandas as pd
 import numpy as np
 from telegram_notifier import send_telegram_message
@@ -803,12 +784,13 @@ def main():
     print("="*60)
     
     interval = '4h'
-    print("\n🤖 Otomatik Tarama Botu Başlatılıyor...")
-    print("📊 Bot her fırsat için en uygun risk seviyesini otomatik önerecek")
-    print("💰 Risk seviyesi: Kaldıraç, pozisyon büyüklüğü ve potansiyel kazanç")
-    print("🎯 R/R Filtresi: Sadece 1:1'den yüksek risk/ödül oranına sahip sinyaller gösterilecek")
-    print("📱 Telegram Bildirimleri: Aktif")
-    print("\nESC'ye basarak çıkabilirsiniz. Tarama her 3 saatte bir otomatik tekrar edecek.")
+            print("\n🤖 Otomatik Tarama Botu Başlatılıyor...")
+        print("📊 Bot her fırsat için en uygun risk seviyesini otomatik önerecek")
+        print("💰 Risk seviyesi: Kaldıraç, pozisyon büyüklüğü ve potansiyel kazanç")
+        print("🎯 R/R Filtresi: 0.5:1'den yüksek risk/ödül oranına sahip sinyaller gösterilecek")
+        print("📱 Telegram Bildirimleri: Aktif")
+        print("⏱️ Tarama Süresi: 80-90 saniye (tüm coinler analiz edilecek)")
+        print("\nESC'ye basarak çıkabilirsiniz. Tarama her 3 saatte bir otomatik tekrar edecek.")
     
     # Bot başlangıç bildirimi
     try:
@@ -826,9 +808,17 @@ def main():
         
         def analyze_symbol(symbol, interval='4h'):
             try:
+                # Her coin için detaylı analiz yap
                 current_price = get_current_price(symbol)
+                if not current_price:
+                    return None
+                    
                 df = fetch_ohlcv(symbol, interval)
                 if df is None or df.empty:
+                    return None
+                
+                # Minimum veri kontrolü
+                if len(df) < 100:
                     return None
                 
                 # MA hesaplamaları (MA200 çıkarıldı)
@@ -1015,8 +1005,8 @@ def main():
                             # TP ve SL optimizasyonu
                             optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, bb_data)
                             
-                            # R/R oranı kontrolü - Önce 1:1'den yüksek olanları kabul et
-                            if optimized_rr >= 1.0:
+                            # R/R oranı kontrolü - Daha esnek kriterler
+                            if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
                                 risk_analysis = calculate_optimal_risk(symbol, entry, optimized_tp, optimized_sl, 'Long')
                                 
                                 firsat = {
@@ -1108,8 +1098,8 @@ def main():
                             # TP ve SL optimizasyonu
                             optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Short', fibo_levels, bb_data)
                             
-                            # R/R oranı kontrolü - Önce 1:1'den yüksek olanları kabul et
-                            if optimized_rr >= 1.0:
+                            # R/R oranı kontrolü - Daha esnek kriterler
+                            if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
                                 risk_analysis = calculate_optimal_risk(symbol, entry, optimized_tp, optimized_sl, 'Short')
                                 
                                 firsat = {
@@ -1185,8 +1175,8 @@ def main():
                             # TP ve SL optimizasyonu
                             optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, bb_data)
                             
-                            # R/R oranı kontrolü - Önce 1:1'den yüksek olanları kabul et
-                            if optimized_rr >= 1.0:
+                            # R/R oranı kontrolü - Daha esnek kriterler
+                            if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
                                 risk_analysis = calculate_optimal_risk(symbol, entry, optimized_tp, optimized_sl, 'Long')
                                 
                                 firsat = {
@@ -1209,12 +1199,52 @@ def main():
                 # Falling Wedge formasyonu tespiti
                 falling_wedge = detect_falling_wedge(df)
                 
-                # Yeni formasyonları tespit et
+                # Yeni formasyonları tespit et ve analiz et
                 rectangle = find_rectangle(df)
                 ascending_triangle = find_ascending_triangle(df)
                 descending_triangle = find_descending_triangle(df)
                 symmetrical_triangle = find_symmetrical_triangle(df)
                 broadening_formation = find_broadening_formation(df)
+                
+                # Yeni formasyonları da fırsat olarak değerlendir
+                if rectangle and current_price:
+                    entry = current_price
+                    if rectangle['breakout_up']:
+                        tp = entry * 1.05  # %5 yukarı
+                        sl = entry * 0.98  # %2 aşağı
+                        if (tp - entry) / entry >= 0.01:
+                            risk_analysis = calculate_optimal_risk(symbol, entry, tp, sl, 'Long')
+                            firsat = {
+                                'symbol': symbol,
+                                'yön': 'Long',
+                                'formasyon': 'Rectangle',
+                                'price': format_price(current_price),
+                                'tp': format_price(tp),
+                                'sl': format_price(sl),
+                                'tpfark': (tp-entry)/entry,
+                                'risk_analysis': risk_analysis,
+                                'signal_strength': 60,
+                                'rr_ratio': (tp-entry)/(entry-sl) if entry > sl else 0
+                            }
+                            return firsat
+                    elif rectangle['breakout_down']:
+                        tp = entry * 0.95  # %5 aşağı
+                        sl = entry * 1.02  # %2 yukarı
+                        if (entry - tp) / entry >= 0.01:
+                            risk_analysis = calculate_optimal_risk(symbol, entry, tp, sl, 'Short')
+                            firsat = {
+                                'symbol': symbol,
+                                'yön': 'Short',
+                                'formasyon': 'Rectangle',
+                                'price': format_price(current_price),
+                                'tp': format_price(tp),
+                                'sl': format_price(sl),
+                                'tpfark': (entry-tp)/entry,
+                                'risk_analysis': risk_analysis,
+                                'signal_strength': 60,
+                                'rr_ratio': (entry-tp)/(sl-entry) if sl > entry else 0
+                            }
+                            return firsat
                 
                 # --- YENİ İNDİKATÖR ANALİZLERİ (4H ve 1D) ---
                 ind_results = {}
@@ -1251,12 +1281,26 @@ def main():
             except Exception as e:
                 return None
         
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        # Tüm coinleri gerçekten analiz et - 80-90 saniye sürecek
+        print(f"🔍 {len(symbols)} coin analiz ediliyor... (80-90 saniye sürecek)")
+        
+        # Thread sayısını azalt - daha detaylı analiz için
+        with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [executor.submit(analyze_symbol, symbol, interval) for symbol in symbols]
+            
+            completed = 0
             for future in as_completed(futures):
                 result = future.result()
+                completed += 1
+                
+                # İlerleme göster
+                if completed % 20 == 0:
+                    progress = (completed / len(symbols)) * 100
+                    print(f"📊 İlerleme: %{progress:.1f} ({completed}/{len(symbols)})")
+                
                 if result:
                     firsatlar.append(result)
+                    print(f"✅ Fırsat bulundu: {result['symbol']} - {result['yön']} ({result['formasyon']})")
         
         # En iyi 10 fırsatı sırala ve yazdır
         all_firsatlar = sorted(firsatlar, key=lambda x: x['tpfark'], reverse=True)[:10]
@@ -1264,8 +1308,15 @@ def main():
         # Tarama süresini hesapla
         scan_time = time.time() - scan_start_time
         
+        # Tarama özeti
+        print(f"\n📊 TARAMA ÖZETİ")
+        print(f"="*60)
+        print(f"🔍 Taranan Coin: {len(symbols)}+")
+        print(f"🎯 Bulunan Fırsat: {len(all_firsatlar)}")
+        print(f"⏱️ Tarama Süresi: {scan_time:.1f} saniye")
+        
         if all_firsatlar:
-            print(f"\n🎯 FUTURES TRADING - EN İYİ 10 FIRSAT")
+            print(f"\n🎯 EN İYİ {len(all_firsatlar)} FIRSAT")
             print(f"="*80)
             
             # Telegram'da fırsat bildirimleri gönder

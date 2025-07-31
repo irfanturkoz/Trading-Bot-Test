@@ -78,6 +78,9 @@ class LicenseManager:
         # Önce admin lisanslarını yeniden yükle (güncel olması için)
         self.load_admin_licenses()
         
+        print(f"🔍 Doğrulanan anahtar: {license_key}")
+        print(f"📋 Mevcut anahtarlar: {list(self.valid_licenses.keys())}")
+        
         if license_key not in self.valid_licenses:
             return False, "Geçersiz lisans anahtarı!"
         
