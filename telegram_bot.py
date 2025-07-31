@@ -228,8 +228,17 @@ def handle_license_input(message):
     user_id = message.from_user.id
     license_key = message.text.strip()
     
+    # Debug mesajı
+    print(f"🔍 Lisans kontrolü: {license_key}")
+    
     # Lisans anahtarını doğrula
-    is_valid, result = license_manager.validate_license(license_key)
+    try:
+        is_valid, result = license_manager.validate_license(license_key)
+        print(f"✅ Lisans sonucu: {is_valid}, {result}")
+    except Exception as e:
+        print(f"❌ Lisans kontrol hatası: {e}")
+        bot.reply_to(message, f"❌ **Lisans kontrol hatası:** {e}", parse_mode='Markdown')
+        return
     
     if is_valid:
         # Lisans geçerli
