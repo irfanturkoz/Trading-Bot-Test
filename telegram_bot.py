@@ -879,17 +879,29 @@ def send_scan_results_to_user(user_id, results):
 def main():
     """Bot'u başlat"""
     print("🤖 Telegram Bot Başlatılıyor...")
-    print(f"📱 Bot: @apfel_trading_bot")
+    print(f"📱 Bot: @apfel_trading2_bot")
     print(f"🔑 Token: {TELEGRAM_BOT_TOKEN[:20]}...")
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
     print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
     
     try:
-        bot.polling(none_stop=True)
+        # Webhook'u temizle
+        try:
+            bot.remove_webhook()
+            print("✅ Webhook temizlendi")
+        except:
+            pass
+        
+        # Bot'u başlat
+        bot.polling(none_stop=True, timeout=60)
     except KeyboardInterrupt:
         print("\n👋 Bot durduruldu.")
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
+        if "Conflict" in str(e):
+            print("⚠️ Conflict hatası! 10 saniye bekleniyor...")
+            time.sleep(10)
+            main()  # Tekrar dene
 
 # Bot'u başlat
 if __name__ == "__main__":

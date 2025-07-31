@@ -7,7 +7,7 @@ BINANCE_API_SECRET = ""
 # 1. @BotFather'dan bot oluşturun ve token alın
 # 2. Bot ile konuşun ve /start komutunu gönderin
 # 3. https://api.telegram.org/bot<BOT_TOKEN>/getUpdates adresinden chat_id'nizi alın
-TELEGRAM_BOT_TOKEN = "8243806452:AAHzrY3CYZFhX64FKd9wFCY-JwBUnoV8KQA"  # Bot token'ı
+TELEGRAM_BOT_TOKEN = "8226593755:AAFF4SubMxwkaAzZbGZvGcFqYeYBScSKlSA"  # Yeni bot token'ı
 ADMIN_CHAT_ID = "7977984015"         # Chat ID'niz
 
 # Diğer ayarlar buraya eklenebilir 
