@@ -1,0 +1,90 @@
+{
+  "MONTHLY_2024_001": {
+    "type": "monthly",
+    "duration": 30,
+    "price": 200,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi"
+    ]
+  },
+  "MONTHLY_2024_002": {
+    "type": "monthly",
+    "duration": 30,
+    "price": 200,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi"
+    ]
+  },
+  "QUARTERLY_2024_001": {
+    "type": "quarterly",
+    "duration": 90,
+    "price": 500,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek"
+    ]
+  },
+  "QUARTERLY_2024_002": {
+    "type": "quarterly",
+    "duration": 90,
+    "price": 500,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek"
+    ]
+  },
+  "UNLIMITED_2024_001": {
+    "type": "unlimited",
+    "duration": -1,
+    "price": 1500,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek",
+      "\u00d6zel Formasyonlar",
+      "7/24 Destek"
+    ]
+  },
+  "UNLIMITED_2024_002": {
+    "type": "unlimited",
+    "duration": -1,
+    "price": 1500,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek",
+      "\u00d6zel Formasyonlar",
+      "7/24 Destek"
+    ]
+  },
+  "MONTHLY_20250731_165754_1M511J": {
+    "type": "monthly",
+    "duration": 30,
+    "price": 200,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi"
+    ]
+  },
+  "MONTHLY_20250731_170201_C5DF9K": {
+    "type": "monthly",
+    "duration": 30,
+    "price": 200,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "key": "MONTHLY_20250731_165754_1M511J",
+  "type": "monthly",
+  "activated_date": "2025-07-31T17:04:22.238491",
+  "expiry_date": "2025-08-30T17:04:22.238504",
+  "features": [
+    "Temel Tarama",
+    "Telegram Bildirimleri",
+    "Formasyon Analizi"
+  ],
+  "price": 200,
+  "status": "active"
+}

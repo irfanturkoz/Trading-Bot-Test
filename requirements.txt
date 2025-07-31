@@ -1,0 +1,9 @@
+requests
+pandas
+numpy
+python-telegram-bot
+python-dotenv
+streamlit>=1.28.0
+plotly>=5.15.0
+pyTelegramBotAPI>=4.12.0
+flask>=2.0.0 
