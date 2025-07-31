@@ -80,22 +80,14 @@
       "7/24 Destek"
     ]
   },
-  "Admin2933818234A": {
-    "type": "unlimited",
-    "duration": -1,
-    "price": 0,
+  "MONTHLY_20250731_200418_9CQH08": {
+    "type": "monthly",
+    "duration": 30,
+    "price": 200,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
-      "Formasyon Analizi",
-      "\u00d6ncelikli Destek",
-      "\u00d6zel Formasyonlar",
-      "7/24 Destek",
-      "Admin Özellikleri",
-      "Sınırsız Kullanım"
-    ],
-    "activated_date": "2025-07-31T20:00:00",
-    "expiry_date": null,
-    "is_active": true
+      "Formasyon Analizi"
+    ]
   }
 }

@@ -2351,5 +2351,55 @@ def send_error_notification(error_message):
     except Exception as e:
         print(f"❌ Hata bildirimi gönderilemedi: {e}")
 
+def get_scan_results():
+    """Tarama sonuçlarını döndür (Telegram bot için)"""
+    try:
+        # Lisans yöneticisini başlat
+        license_manager = LicenseManager()
+        
+        # Lisans kontrolü
+        if not license_manager.check_license():
+            return None
+        
+        # Tarama yap
+        scan_start_time = time.time()
+        symbols = get_usdt_symbols()
+        firsatlar = []
+        
+        # Tüm coinleri gerçekten analiz et - 80-90 saniye sürecek
+        print(f"🔍 {len(symbols)} coin analiz ediliyor... (80-90 saniye sürecek)")
+        
+        # Thread sayısını azalt - daha detaylı analiz için
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(analyze_symbol, symbol, '4h') for symbol in symbols]
+            
+            completed = 0
+            for future in as_completed(futures):
+                result = future.result()
+                completed += 1
+                
+                # İlerleme göster
+                if completed % 20 == 0:
+                    progress = (completed / len(symbols)) * 100
+                    print(f"📊 İlerleme: %{progress:.1f} ({completed}/{len(symbols)})")
+                
+                if result:
+                    firsatlar.append(result)
+        
+        # En iyi 10 fırsatı sırala
+        all_firsatlar = sorted(firsatlar, key=lambda x: x['tpfark'], reverse=True)[:10]
+        
+        # Tarama süresini hesapla
+        scan_time = time.time() - scan_start_time
+        
+        return {
+            'total_scanned': len(symbols),
+            'opportunities': all_firsatlar,
+            'scan_time': scan_time
+        }
+    except Exception as e:
+        print(f"Tarama hatası: {e}")
+        return None
+
 if __name__ == "__main__":
     main()
