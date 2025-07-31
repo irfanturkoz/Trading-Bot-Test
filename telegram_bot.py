@@ -149,19 +149,35 @@ Lisans anahtarınızı buraya yazın.
 
 @bot.message_handler(commands=['scan'])
 def start_scan(message):
-    """Otomatik tarama bilgisi"""
-    info_text = """
-🤖 **Otomatik Tarama Sistemi**
-
-✅ **Bot otomatik olarak 3 saatte bir tarama yapar**
-📊 **En iyi 10 fırsatı size gönderir**
-⏰ **Sonraki tarama: 3 saat sonra**
-
-🔍 **Manuel tarama yoktur - sistem otomatiktir!**
-
-📱 **Sorularınız için:** @tgtradingbot
-"""
-    bot.reply_to(message, info_text, parse_mode='Markdown')
+    """Manuel tarama başlat"""
+    user_id = message.from_user.id
+    
+    # Kullanıcının lisansını kontrol et
+    license_status, license_result = check_user_license(user_id)
+    if not license_status:
+        bot.reply_to(message, "❌ **Lisansınız bulunamadı!**\n\n🔑 Lisans anahtarınızı girin.", parse_mode='Markdown')
+        return
+    
+    # Son tarama zamanını kontrol et
+    if can_user_scan(user_id):
+        # Tarama başlat
+        bot.send_message(user_id, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 3-5 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
+        
+        try:
+            scan_results = perform_scan()
+            if scan_results:
+                send_scan_results_to_user(user_id, scan_results)
+                # Son tarama zamanını kaydet
+                save_last_scan_time(user_id)
+                bot.send_message(user_id, "✅ **Tarama tamamlandı!**\n\n⏰ **Sonraki tarama: 3 saat sonra**", parse_mode='Markdown')
+            else:
+                bot.send_message(user_id, "❌ **Tarama başarısız oldu. Lütfen tekrar deneyin.**", parse_mode='Markdown')
+        except Exception as e:
+            bot.send_message(user_id, f"❌ **Tarama hatası: {e}**", parse_mode='Markdown')
+    else:
+        # Kullanıcı henüz beklemeli
+        remaining_time = get_remaining_scan_time(user_id)
+        bot.reply_to(message, f"⏰ **Tarama için bekleyin!**\n\n⏱️ **Kalan süre: {remaining_time}**\n\n🔄 **3 saatte bir tarama yapabilirsiniz.**", parse_mode='Markdown')
 
 @bot.message_handler(func=lambda message: message.text == "🔍 Coin Tara")
 def handle_scan_button(message):
@@ -239,6 +255,7 @@ def handle_license_input(message):
 🚀 **Bot Başlatılıyor!**
 
 🔍 **Coin Tara** butonuna basarak tarama başlatabilirsiniz.
+⏰ **Her 3 saatte bir tarama yapabilirsiniz.**
 """
         
         # Ana menü butonları
@@ -269,9 +286,11 @@ def handle_license_input(message):
             scan_results = perform_scan()
             if scan_results:
                 send_scan_results_to_user(user_id, scan_results)
-                bot.send_message(user_id, "✅ **İlk tarama tamamlandı! Artık 3 saatte bir otomatik tarama yapılacak.**", parse_mode='Markdown')
+                # Son tarama zamanını kaydet
+                save_last_scan_time(user_id)
+                bot.send_message(user_id, "✅ **İlk tarama tamamlandı!**\n\n⏰ **Sonraki tarama: 3 saat sonra**\n\n🔍 **'🔍 Coin Tara' butonuna basarak tarama yapabilirsiniz.**", parse_mode='Markdown')
             else:
-                bot.send_message(user_id, "❌ **İlk tarama başarısız oldu. 3 saat sonra tekrar denenecek.**", parse_mode='Markdown')
+                bot.send_message(user_id, "❌ **İlk tarama başarısız oldu. Lütfen tekrar deneyin.**", parse_mode='Markdown')
         except Exception as e:
             bot.send_message(user_id, f"❌ **İlk tarama hatası: {e}**", parse_mode='Markdown')
         
@@ -354,7 +373,8 @@ def save_user_license(user_id, license_info):
             "price": license_info['price'],
             "activated_date": license_info['activated_date'],
             "expiry_date": license_info['expiry_date'],
-            "features": license_info['features']
+            "features": license_info['features'],
+            "last_scan_time": None  # İlk tarama zamanı
         }
         
         with open(f"user_licenses/{user_id}.json", 'w') as f:
@@ -363,50 +383,79 @@ def save_user_license(user_id, license_info):
     except Exception as e:
         print(f"Lisans kaydedilemedi: {e}")
 
-def auto_scan():
-    """Otomatik tarama fonksiyonu"""
-    print("🔄 Otomatik tarama sistemi başlatıldı (3 saatte bir)")
+def can_user_scan(user_id):
+    """Kullanıcının tarama yapıp yapamayacağını kontrol eder"""
+    try:
+        if os.path.exists(f"user_licenses/{user_id}.json"):
+            with open(f"user_licenses/{user_id}.json", 'r') as f:
+                license_data = json.load(f)
+            
+            last_scan_time = license_data.get('last_scan_time')
+            if last_scan_time is None:
+                return True  # İlk tarama
+            
+            # Son taramadan bu yana geçen süreyi hesapla
+            last_scan = datetime.fromisoformat(last_scan_time)
+            time_diff = datetime.now() - last_scan
+            
+            # 3 saat = 10800 saniye
+            return time_diff.total_seconds() >= 10800
+            
+    except Exception as e:
+        print(f"Tarama kontrolü hatası: {e}")
     
-    while True:
-        try:
-            print("🔄 Otomatik tarama başlatılıyor...")
+    return True
+
+def save_last_scan_time(user_id):
+    """Son tarama zamanını kaydeder"""
+    try:
+        if os.path.exists(f"user_licenses/{user_id}.json"):
+            with open(f"user_licenses/{user_id}.json", 'r') as f:
+                license_data = json.load(f)
             
-            # Tüm aktif lisanslı kullanıcılara bildirim gönder
-            active_users = get_active_users()
+            license_data['last_scan_time'] = datetime.now().isoformat()
             
-            if active_users:
-                print(f"📱 {len(active_users)} aktif kullanıcıya tarama gönderiliyor...")
+            with open(f"user_licenses/{user_id}.json", 'w') as f:
+                json.dump(license_data, f, indent=2)
                 
-                # Tarama yap ve sonuçları al
-                scan_results = perform_scan()
-                
-                if scan_results:
-                    # Her kullanıcıya sonuçları gönder
-                    for user_id in active_users:
-                        try:
-                            # Tarama başlama mesajı gönder
-                            bot.send_message(user_id, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 3-5 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
-                            
-                            # Kısa bir bekleme (tarama simülasyonu)
-                            time.sleep(2)
-                            
-                            # Tarama sonuçlarını gönder
-                            send_scan_results_to_user(user_id, scan_results)
-                            print(f"✅ Kullanıcı {user_id} için tarama gönderildi")
-                        except Exception as e:
-                            print(f"❌ Kullanıcı {user_id} için bildirim gönderilemedi: {e}")
-                else:
-                    print("❌ Tarama sonuçları alınamadı")
+    except Exception as e:
+        print(f"Tarama zamanı kaydedilemedi: {e}")
+
+def get_remaining_scan_time(user_id):
+    """Kalan tarama süresini döndürür"""
+    try:
+        if os.path.exists(f"user_licenses/{user_id}.json"):
+            with open(f"user_licenses/{user_id}.json", 'r') as f:
+                license_data = json.load(f)
+            
+            last_scan_time = license_data.get('last_scan_time')
+            if last_scan_time is None:
+                return "Hemen tarama yapabilirsiniz"
+            
+            last_scan = datetime.fromisoformat(last_scan_time)
+            time_diff = datetime.now() - last_scan
+            
+            # 3 saat = 10800 saniye
+            remaining_seconds = 10800 - time_diff.total_seconds()
+            
+            if remaining_seconds <= 0:
+                return "Hemen tarama yapabilirsiniz"
+            
+            # Saat ve dakika hesapla
+            hours = int(remaining_seconds // 3600)
+            minutes = int((remaining_seconds % 3600) // 60)
+            
+            if hours > 0:
+                return f"{hours} saat {minutes} dakika"
             else:
-                print("📱 Aktif kullanıcı bulunamadı")
-            
-            print("✅ Otomatik tarama tamamlandı. 3 saat sonra tekrar...")
-            
-        except Exception as e:
-            print(f"❌ Otomatik tarama hatası: {e}")
-        
-        # 3 saat bekle (10800 saniye)
-        time.sleep(10800)
+                return f"{minutes} dakika"
+                
+    except Exception as e:
+        print(f"Kalan süre hesaplama hatası: {e}")
+    
+    return "Bilinmiyor"
+
+# Otomatik tarama fonksiyonu kaldırıldı - artık manuel tarama
 
 def get_active_users():
     """Aktif lisanslı kullanıcıları al"""
@@ -498,11 +547,7 @@ def main():
     print(f"📱 Bot: @apfel_trading_bot")
     print(f"🔑 Token: {TELEGRAM_BOT_TOKEN[:20]}...")
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
-    
-    # Otomatik tarama thread'ini başlat
-    auto_scan_thread = threading.Thread(target=auto_scan, daemon=True)
-    auto_scan_thread.start()
-    print("🔄 Otomatik tarama başlatıldı (3 saatte bir)")
+    print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
     
     try:
         bot.polling(none_stop=True)
