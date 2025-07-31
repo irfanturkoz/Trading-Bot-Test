@@ -474,111 +474,250 @@ def get_active_users():
     return active_users
 
 def perform_scan():
-    """Gerçek Binance API ile tarama"""
+    """botanlik2.py ile gerçek analiz"""
     try:
         import time
         import random
-        import requests
         
         # Tarama başlangıç zamanı
         start_time = time.time()
         
-        # Gerçekçi tarama süresi (80-90 saniye)
-        time.sleep(85)
+        # botanlik2.py'den gerekli fonksiyonları import et
+        from botanlik2 import get_usdt_symbols, get_current_price, calculate_optimal_risk
+        from botanlik2 import find_all_tobo, find_all_obo, detect_falling_wedge
+        from botanlik2 import find_rectangle, find_ascending_triangle, find_descending_triangle
+        from botanlik2 import find_symmetrical_triangle, find_broadening_formation
+        from botanlik2 import calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands
+        from botanlik2 import calculate_stochastic, calculate_adx, format_price
+        from data_fetcher import fetch_ohlcv
         
-        # Tarama süresini hesapla
-        actual_scan_time = time.time() - start_time
-        scan_time_minutes = int(actual_scan_time // 60)
-        scan_time_seconds = int(actual_scan_time % 60)
+        print("🔍 botanlik2.py ile gerçek analiz başlatılıyor...")
         
-        # Gerçekçi süre göster (85 saniye = 1 dakika 25 saniye)
-        scan_time_minutes = 1
-        scan_time_seconds = 25
+        # Tüm USDT sembollerini al
+        symbols = get_usdt_symbols()
+        print(f"📊 {len(symbols)} coin analiz ediliyor...")
         
-        # Gerçek fiyatları Binance API'den al
-        def get_binance_price(symbol):
+        firsatlar = []
+        
+        def analyze_symbol(symbol, interval='4h'):
             try:
-                url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
-                response = requests.get(url, timeout=5)
-                if response.status_code == 200:
-                    data = response.json()
-                    return float(data['price'])
-                else:
+                current_price = get_current_price(symbol)
+                if not current_price:
                     return None
-            except:
+                
+                df = fetch_ohlcv(symbol, interval)
+                if df is None or df.empty:
+                    return None
+                
+                # MA hesaplamaları
+                df['MA7'] = df['close'].rolling(window=7).mean()
+                df['MA25'] = df['close'].rolling(window=25).mean()
+                df['MA50'] = df['close'].rolling(window=50).mean()
+                df['MA99'] = df['close'].rolling(window=99).mean()
+                
+                ma_trend = None
+                if df['MA7'].iloc[-1] > df['MA25'].iloc[-1] > df['MA50'].iloc[-1] > df['MA99'].iloc[-1]:
+                    ma_trend = 'Güçlü Yükseliş'
+                elif df['MA7'].iloc[-1] < df['MA25'].iloc[-1] < df['MA50'].iloc[-1] < df['MA99'].iloc[-1]:
+                    ma_trend = 'Güçlü Düşüş'
+                else:
+                    ma_trend = 'Kararsız'
+                
+                fibo_levels, fibo_high, fibo_low = calculate_fibonacci_levels(df)
+                
+                # Tüm formasyonları analiz et
+                all_tobo = find_all_tobo(df)
+                all_obo = find_all_obo(df)
+                falling_wedge = detect_falling_wedge(df)
+                rectangle = find_rectangle(df)
+                ascending_triangle = find_ascending_triangle(df)
+                descending_triangle = find_descending_triangle(df)
+                symmetrical_triangle = find_symmetrical_triangle(df)
+                broadening = find_broadening_formation(df)
+                
+                # En güçlü formasyonu belirle
+                formations = []
+                
+                if all_tobo:
+                    tobo = all_tobo[-1]
+                    formations.append({
+                        'type': 'TOBO',
+                        'data': tobo,
+                        'direction': 'Long',
+                        'tp': fibo_levels.get('0.382', current_price * 1.05),
+                        'sl': tobo['neckline']
+                    })
+                
+                if all_obo:
+                    obo = all_obo[-1]
+                    formations.append({
+                        'type': 'OBO',
+                        'data': obo,
+                        'direction': 'Short',
+                        'tp': fibo_levels.get('0.618', current_price * 0.95),
+                        'sl': obo['neckline']
+                    })
+                
+                if falling_wedge:
+                    formations.append({
+                        'type': 'Falling Wedge',
+                        'data': falling_wedge,
+                        'direction': 'Long',
+                        'tp': falling_wedge.get('tp', current_price * 1.05),
+                        'sl': falling_wedge.get('sl', current_price * 0.95)
+                    })
+                
+                if rectangle:
+                    formations.append({
+                        'type': 'Rectangle',
+                        'data': rectangle,
+                        'direction': 'Long' if current_price > rectangle['resistance'] else 'Short',
+                        'tp': rectangle['resistance'] if current_price > rectangle['resistance'] else rectangle['support'],
+                        'sl': rectangle['support'] if current_price > rectangle['resistance'] else rectangle['resistance']
+                    })
+                
+                if ascending_triangle:
+                    formations.append({
+                        'type': 'Ascending Triangle',
+                        'data': ascending_triangle,
+                        'direction': 'Long',
+                        'tp': ascending_triangle['resistance'],
+                        'sl': ascending_triangle['support']
+                    })
+                
+                if descending_triangle:
+                    formations.append({
+                        'type': 'Descending Triangle',
+                        'data': descending_triangle,
+                        'direction': 'Short',
+                        'tp': descending_triangle['support'],
+                        'sl': descending_triangle['resistance']
+                    })
+                
+                if symmetrical_triangle:
+                    formations.append({
+                        'type': 'Symmetrical Triangle',
+                        'data': symmetrical_triangle,
+                        'direction': 'Long' if ma_trend == 'Güçlü Yükseliş' else 'Short',
+                        'tp': symmetrical_triangle['upper'],
+                        'sl': symmetrical_triangle['lower']
+                    })
+                
+                if broadening:
+                    formations.append({
+                        'type': 'Broadening Formation',
+                        'data': broadening,
+                        'direction': 'Long' if broadening['breakout_up'] else 'Short',
+                        'tp': broadening['current_resistance'] if broadening['breakout_up'] else broadening['current_support'],
+                        'sl': broadening['current_support'] if broadening['breakout_up'] else broadening['current_resistance']
+                    })
+                
+                # En iyi formasyonu seç
+                if not formations:
+                    return None
+                
+                # R/R oranına göre sırala
+                best_formation = None
+                best_rr = 0
+                
+                for formation in formations:
+                    tp = formation['tp']
+                    sl = formation['sl']
+                    
+                    if formation['direction'] == 'Long':
+                        if tp > current_price > sl:
+                            rr = (tp - current_price) / (current_price - sl)
+                        else:
+                            continue
+                    else:
+                        if sl > current_price > tp:
+                            rr = (current_price - tp) / (sl - current_price)
+                        else:
+                            continue
+                    
+                    if rr > best_rr and rr >= 0.5:  # Minimum 0.5:1 R/R
+                        best_rr = rr
+                        best_formation = formation
+                
+                if not best_formation:
+                    return None
+                
+                # Risk analizi
+                risk_analysis = calculate_optimal_risk(
+                    symbol, current_price, best_formation['tp'], 
+                    best_formation['sl'], best_formation['direction']
+                )
+                
+                # Sinyal gücü hesapla
+                macd_data = calculate_macd(df)
+                bb_data = calculate_bollinger_bands(df)
+                stoch_data = calculate_stochastic(df)
+                adx_data = calculate_adx(df)
+                
+                signal_strength = 70  # Varsayılan
+                if macd_data and 'Yükseliş' in ma_trend and best_formation['direction'] == 'Long':
+                    signal_strength += 10
+                if adx_data and adx_data.get('trend_direction') == 'Bullish' and best_formation['direction'] == 'Long':
+                    signal_strength += 10
+                
+                return {
+                    'symbol': symbol,
+                    'yön': best_formation['direction'],
+                    'formasyon': best_formation['type'],
+                    'price': current_price,
+                    'tp': best_formation['tp'],
+                    'sl': best_formation['sl'],
+                    'tpfark': abs(best_formation['tp'] - current_price) / current_price,
+                    'risk_analysis': risk_analysis,
+                    'signal_strength': min(95, signal_strength),
+                    'rr_ratio': best_rr
+                }
+                
+            except Exception as e:
+                print(f"Hata {symbol}: {e}")
                 return None
         
-        # Gerçekçi fırsatlar oluştur (5x kaldıraç ile)
-        symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT", "UNIUSDT", "AAVEUSDT", "SOLUSDT", "MATICUSDT", "AVAXUSDT"]
-        formations = ["TOBO", "OBO", "Falling Wedge", "Bullish Flag", "Rectangle"]
-        directions = ["Long", "Short"]
+        # Sıralı analiz - düzgün ve sağlıklı
+        print("🔍 Sıralı analiz başlatılıyor... (3-4 dakika sürecek)")
         
-        opportunities = []
-        for i in range(random.randint(4, 8)):
-            symbol = random.choice(symbols)
-            formation = random.choice(formations)
-            direction = random.choice(directions)
-            
-            # Binance API'den gerçek fiyat al
-            base_price = get_binance_price(symbol)
-            if base_price is None:
-                # API çalışmazsa varsayılan fiyatlar
-                if symbol == "BTCUSDT":
-                    base_price = 126000
-                elif symbol == "ETHUSDT":
-                    base_price = 4300
-                elif symbol == "SOLUSDT":
-                    base_price = 140
-                elif symbol == "UNIUSDT":
-                    base_price = 9.0
-                elif symbol == "AAVEUSDT":
-                    base_price = 300
-                elif symbol == "AVAXUSDT":
-                    base_price = 30
-                elif symbol == "MATICUSDT":
-                    base_price = 0.70
-                elif symbol == "DOTUSDT":
-                    base_price = 7.0
-                elif symbol == "LINKUSDT":
-                    base_price = 15
-                else:
-                    base_price = random.uniform(0.1, 50)
-            
-            potential_percent = random.uniform(3.0, 8.0)
-            rr_ratio = random.uniform(0.5, 2.0)
-            
-            # TP ve SL hesaplamaları (5x kaldıraç)
-            if direction == "Long":
-                tp_price = base_price * (1 + potential_percent/100)
-                sl_price = base_price * (1 - (potential_percent/100)/rr_ratio)
-            else:
-                tp_price = base_price * (1 - potential_percent/100)
-                sl_price = base_price * (1 + (potential_percent/100)/rr_ratio)
-            
-            opportunities.append({
-                "symbol": symbol,
-                "yön": direction,
-                "formasyon": formation,
-                "price": base_price,
-                "tp": tp_price,
-                "sl": sl_price,
-                "tpfark": potential_percent/100,
-                "risk_analysis": {
-                    "leverage": "5x",
-                    "position_size": "Kasanın %5'i",
-                    "potential_gain": f"%{potential_percent*5:.1f}",
-                    "risk_amount": f"%{(potential_percent/rr_ratio)*5:.1f}",
-                    "max_loss": f"%{(potential_percent/rr_ratio)*5:.1f}",
-                    "risk_reward": f"{rr_ratio:.1f}:1"
-                },
-                "signal_strength": random.randint(60, 90)
-            })
+        completed = 0
+        for symbol in symbols:
+            try:
+                result = analyze_symbol(symbol)
+                completed += 1
+                
+                # İlerleme göster
+                if completed % 20 == 0:
+                    progress = (completed / len(symbols)) * 100
+                    print(f"📊 İlerleme: %{progress:.1f} ({completed}/{len(symbols)})")
+                
+                if result:
+                    firsatlar.append(result)
+                    print(f"✅ {symbol}: {result['formasyon']} - R/R: {result['rr_ratio']:.2f}")
+                
+                # Her 10 coin'de bir kısa bekleme (API limitlerini aşmamak için)
+                if completed % 10 == 0:
+                    time.sleep(0.5)
+                    
+            except Exception as e:
+                print(f"❌ {symbol} analiz hatası: {e}")
+                completed += 1
+                continue
+        
+        # En iyi 10 fırsatı sırala
+        firsatlar = sorted(firsatlar, key=lambda x: x['rr_ratio'], reverse=True)[:10]
+        
+        # Tarama süresini hesapla
+        scan_time = time.time() - start_time
+        scan_time_minutes = int(scan_time // 60)
+        scan_time_seconds = int(scan_time % 60)
         
         return {
-            "total_scanned": 467,
-            "opportunities": opportunities,
+            "total_scanned": len(symbols),
+            "opportunities": firsatlar,
             "scan_time": f"{scan_time_minutes} dakika {scan_time_seconds} saniye"
         }
+        
     except Exception as e:
         print(f"Tarama hatası: {e}")
         return None
@@ -600,7 +739,7 @@ def send_scan_results_to_user(user_id, results):
 """
     
     for i, opp in enumerate(results['opportunities'][:10], 1):
-        # Botanlik.py formatından veri al
+        # botanlik2.py formatından veri al
         symbol = opp.get('symbol', 'UNKNOWN')
         direction = opp.get('yön', 'Unknown')
         formation = opp.get('formasyon', 'Unknown')
@@ -610,11 +749,26 @@ def send_scan_results_to_user(user_id, results):
         tpfark = opp.get('tpfark', 0)
         risk_analysis = opp.get('risk_analysis', {})
         signal_strength = opp.get('signal_strength', 50)
+        rr_ratio = opp.get('rr_ratio', 0)
         
-        # Fiyat formatlaması
-        price_str = f"{price:.6f}" if price < 1 else f"{price:.4f}"
-        tp_str = f"{tp:.6f}" if tp < 1 else f"{tp:.4f}"
-        sl_str = f"{sl:.6f}" if sl < 1 else f"{sl:.4f}"
+        # Fiyat formatlaması (botanlik2.py format_price fonksiyonu gibi)
+        def format_price_display(price):
+            if price == 0:
+                return '0'
+            elif price < 0.0001:
+                return f"{price:.8f}"
+            elif price < 1:
+                return f"{price:.6f}"
+            elif price < 10:
+                return f"{price:.4f}"
+            elif price < 100:
+                return f"{price:.3f}"
+            else:
+                return f"{price:.2f}"
+        
+        price_str = format_price_display(price)
+        tp_str = format_price_display(tp)
+        sl_str = format_price_display(sl)
         
         # Risk analizi
         leverage = risk_analysis.get('leverage', '5x')
@@ -622,16 +776,30 @@ def send_scan_results_to_user(user_id, results):
         potential_gain = risk_analysis.get('potential_gain', '%0.0')
         risk_amount = risk_analysis.get('risk_amount', '%0.0')
         max_loss = risk_analysis.get('max_loss', '%0.0')
-        rr_ratio = risk_analysis.get('risk_reward', '0.0:1')
+        risk_reward = risk_analysis.get('risk_reward', '0.0:1')
+        
+        # Sinyal gücü emoji
+        if signal_strength >= 80:
+            strength_emoji = "🔥"
+            strength_text = "ÇOK GÜÇLÜ"
+        elif signal_strength >= 70:
+            strength_emoji = "⚡"
+            strength_text = "GÜÇLÜ"
+        elif signal_strength >= 60:
+            strength_emoji = "📊"
+            strength_text = "ORTA"
+        else:
+            strength_emoji = "📈"
+            strength_text = "ZAYIF"
         
         message += f"""
 {i}. **{symbol}** - {direction} ({formation})
    💰 Fiyat: {price_str} | TP: {tp_str} | SL: {sl_str}
-   📊 Potansiyel: %{tpfark*100:.2f} | R/R: {rr_ratio} ✅
+   📊 Potansiyel: %{tpfark*100:.2f} | R/R: {risk_reward} ✅
    ⚡ Kaldıraç: {leverage} | Pozisyon: {position_size}
    🎯 Hedef: {potential_gain} | Risk: {risk_amount}
    🔒 Margin: ISOLATED | Max Kayıp: {max_loss}
-   ⚡ Sinyal Gücü: GÜÇLÜ (%{signal_strength})
+   {strength_emoji} Sinyal Gücü: {strength_text} (%{signal_strength})
    ✅ FUTURES İŞLEM AÇILABİLİR!
 """
     
