@@ -3,6 +3,9 @@ from telebot import types
 import json
 import os
 from datetime import datetime
+import threading
+import time
+import concurrent.futures
 from license_manager import LicenseManager
 from config import TELEGRAM_BOT_TOKEN, ADMIN_CHAT_ID
 
@@ -182,7 +185,30 @@ def start_scan(message):
 @bot.message_handler(func=lambda message: message.text == "🔍 Coin Tara")
 def handle_scan_button(message):
     """Coin tara butonu"""
-    start_scan(message)
+    # Asenkron tarama başlat
+    scan_thread = threading.Thread(target=start_scan_async, args=(message,))
+    scan_thread.daemon = True
+    scan_thread.start()
+
+def start_scan_async(message):
+    """Asenkron tarama işlemi"""
+    user_id = message.from_user.id
+    
+    # Tarama başladı mesajı
+    bot.reply_to(message, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 2-3 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
+    
+    try:
+        # Tarama yap
+        scan_results = perform_scan()
+        if scan_results:
+            send_scan_results_to_user(user_id, scan_results)
+            # Son tarama zamanını kaydet
+            save_last_scan_time(user_id)
+            bot.send_message(user_id, "✅ **Tarama tamamlandı!**\n\n⏰ **Sonraki tarama: 3 saat sonra**", parse_mode='Markdown')
+        else:
+            bot.send_message(user_id, "❌ **Tarama başarısız oldu. Lütfen tekrar deneyin.**", parse_mode='Markdown')
+    except Exception as e:
+        bot.send_message(user_id, f"❌ **Tarama hatası:** {e}", parse_mode='Markdown')
 
 @bot.message_handler(func=lambda message: message.text == "📊 Lisans Durumu")
 def handle_status_button(message):
@@ -546,13 +572,30 @@ def perform_scan():
         try:
             # Tüm USDT sembollerini al
             symbols = get_usdt_symbols()
-            print(f"📊 {len(symbols)} coin analiz ediliyor...")
+            print(f"📊 {len(symbols)} coin paralel analiz ediliyor...")
         except Exception as symbols_error:
             print(f"❌ Sembol alma hatası: {symbols_error}")
             print(f"🔍 Traceback: {traceback.format_exc()}")
             return None
         
         firsatlar = []
+        
+        # Paralel analiz ile tüm coinleri işle
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            # Tüm sembolleri paralel olarak analiz et
+            future_to_symbol = {executor.submit(analyze_symbol, symbol): symbol for symbol in symbols}
+            
+            # Sonuçları topla
+            for future in concurrent.futures.as_completed(future_to_symbol):
+                symbol = future_to_symbol[future]
+                try:
+                    result = future.result()
+                    if result:
+                        firsatlar.append(result)
+                        print(f"✅ {symbol} analiz edildi - {len(firsatlar)} fırsat bulundu")
+                except Exception as e:
+                    print(f"❌ {symbol} analiz hatası: {e}")
+                    continue
         
         def analyze_symbol(symbol, interval='4h'):
             try:
