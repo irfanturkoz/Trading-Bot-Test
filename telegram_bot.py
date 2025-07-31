@@ -566,7 +566,7 @@ def perform_scan():
                     ma_trend = 'Güçlü Yükseliş'
                 elif df['MA7'].iloc[-1] < df['MA25'].iloc[-1] < df['MA50'].iloc[-1] < df['MA99'].iloc[-1]:
                     ma_trend = 'Güçlü Düşüş'
-                else:
+            else:
                     ma_trend = 'Kararsız'
                 
                 fibo_levels, fibo_high, fibo_low = calculate_fibonacci_levels(df)
@@ -891,5 +891,7 @@ def main():
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
 
-if __name__ == "__main__":
-    main() 
+# Sadece doğrudan çalıştırıldığında bot'u başlat
+# Railway'de app.py üzerinden çalıştırılacağı için bu kısmı devre dışı bırakıyoruz
+# if __name__ == "__main__":
+#     main() 
