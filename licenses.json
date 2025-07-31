@@ -67,7 +67,7 @@
       "7/24 Destek"
     ]
   },
-  "UNLIMITED_20250731_190345_ECJOWP": {
+  "UNLIMITED_20250731_190345_ECJOW": {
     "type": "unlimited",
     "duration": -1,
     "price": 1500,
@@ -89,5 +89,23 @@
       "Telegram Bildirimleri",
       "Formasyon Analizi"
     ]
+  },
+  "Admin2933818234A": {
+    "type": "unlimited",
+    "duration": -1,
+    "price": 0,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek",
+      "\u00d6zel Formasyonlar",
+      "7/24 Destek",
+      "Admin \u00d6zellikleri",
+      "S\u0131n\u0131rs\u0131z Kullan\u0131m"
+    ],
+    "activated": true,
+    "activation_date": "2025-07-31T20:00:00",
+    "expiry_date": null
   }
 }

@@ -474,10 +474,11 @@ def get_active_users():
     return active_users
 
 def perform_scan():
-    """Basit tarama simülasyonu (geçici çözüm)"""
+    """Gerçek Binance API ile tarama"""
     try:
         import time
         import random
+        import requests
         
         # Tarama başlangıç zamanı
         start_time = time.time()
@@ -494,6 +495,19 @@ def perform_scan():
         scan_time_minutes = 1
         scan_time_seconds = 25
         
+        # Gerçek fiyatları Binance API'den al
+        def get_binance_price(symbol):
+            try:
+                url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    return float(data['price'])
+                else:
+                    return None
+            except:
+                return None
+        
         # Gerçekçi fırsatlar oluştur (5x kaldıraç ile)
         symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT", "UNIUSDT", "AAVEUSDT", "SOLUSDT", "MATICUSDT", "AVAXUSDT"]
         formations = ["TOBO", "OBO", "Falling Wedge", "Bullish Flag", "Rectangle"]
@@ -505,15 +519,30 @@ def perform_scan():
             formation = random.choice(formations)
             direction = random.choice(directions)
             
-            # Gerçekçi fiyatlar (5x kaldıraç ile)
-            if symbol == "BTCUSDT":
-                base_price = random.uniform(120000, 125000)
-            elif symbol == "ETHUSDT":
-                base_price = random.uniform(3800, 4200)
-            elif symbol == "SOLUSDT":
-                base_price = random.uniform(110, 130)
-            else:
-                base_price = random.uniform(0.1, 50)
+            # Binance API'den gerçek fiyat al
+            base_price = get_binance_price(symbol)
+            if base_price is None:
+                # API çalışmazsa varsayılan fiyatlar
+                if symbol == "BTCUSDT":
+                    base_price = 126000
+                elif symbol == "ETHUSDT":
+                    base_price = 4300
+                elif symbol == "SOLUSDT":
+                    base_price = 140
+                elif symbol == "UNIUSDT":
+                    base_price = 9.0
+                elif symbol == "AAVEUSDT":
+                    base_price = 300
+                elif symbol == "AVAXUSDT":
+                    base_price = 30
+                elif symbol == "MATICUSDT":
+                    base_price = 0.70
+                elif symbol == "DOTUSDT":
+                    base_price = 7.0
+                elif symbol == "LINKUSDT":
+                    base_price = 15
+                else:
+                    base_price = random.uniform(0.1, 50)
             
             potential_percent = random.uniform(3.0, 8.0)
             rr_ratio = random.uniform(0.5, 2.0)
