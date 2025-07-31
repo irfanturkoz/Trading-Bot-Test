@@ -72,12 +72,12 @@ Komutlar:
 Lisans anahtarınızı buraya yazın.
 
 💬 **Lisans Satın Almak İçin:**
-@tgtradingbot ile iletişime geçin.
+@ApfelTradingAdmin ile iletişime geçin.
 
 📦 **Paketler:**
-• 1 Aylık: $200
-• 3 Aylık: $500
-• Sınırsız: $1500
+• 1 Aylık: $100
+• 3 Aylık: $200
+• Sınırsız: $500
 """
         
         # Lisans giriş durumunu ayarla
@@ -100,7 +100,7 @@ def send_help(message):
 📊 **Lisans Durumu:** Mevcut lisans bilgilerini gösterir
 🔑 **Lisans Anahtarı Gir:** Yeni lisans anahtarı girmenizi sağlar
 
-💬 **Destek:** @tgtradingbot
+💬 **Destek:** @ApfelTradingAdmin
 """
     bot.reply_to(message, help_text, parse_mode='Markdown')
 
@@ -235,8 +235,13 @@ def handle_license_input(message):
         # Lisans geçerli
         license_info = result
         
+        # Lisansın başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol et
+        if is_license_already_used(license_key, user_id):
+            bot.reply_to(message, "❌ **Bu lisans anahtarı başka bir kullanıcı tarafından kullanılıyor!**\n\n🔑 Farklı bir lisans anahtarı deneyin veya @ApfelTradingAdmin ile iletişime geçin.", parse_mode='Markdown')
+            return
+        
         # Kullanıcı lisansını kaydet
-        save_user_license(user_id, license_info)
+        save_user_license(user_id, license_info, license_key)
         
         success_text = f"""
 ✅ **Lisans Doğrulandı!**
@@ -474,6 +479,28 @@ def get_active_users():
         print(f"Aktif kullanıcılar alınamadı: {e}")
     
     return active_users
+
+
+def is_license_already_used(license_key, current_user_id):
+    """Lisansın başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol et"""
+    try:
+        if os.path.exists("user_licenses"):
+            for filename in os.listdir("user_licenses"):
+                if filename.endswith(".json"):
+                    user_id = filename.replace(".json", "")
+                    if str(user_id) != str(current_user_id):  # Kendisi değilse
+                        try:
+                            with open(f"user_licenses/{filename}", 'r') as f:
+                                user_data = json.load(f)
+                                if 'license_key' in user_data and user_data['license_key'] == license_key:
+                                    return True  # Lisans başka bir kullanıcı tarafından kullanılıyor
+                        except:
+                            continue
+        
+        return False  # Lisans kullanılmıyor
+    except Exception as e:
+        print(f"Lisans kontrol hatası: {e}")
+        return False  # Hata varsa kullanılabilir
 
 def perform_scan():
     """botanlik2.py ile gerçek analiz"""
