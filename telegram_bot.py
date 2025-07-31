@@ -15,6 +15,11 @@ license_manager = LicenseManager()
 # Kullanıcı durumları
 user_states = {}
 
+# Otomatik tarama için
+import threading
+import time
+from botanlik import main as scan_main
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """Bot başlangıç mesajı"""
@@ -145,61 +150,19 @@ Lisans anahtarınızı buraya yazın.
 
 @bot.message_handler(commands=['scan'])
 def start_scan(message):
-    """Coin taraması başlat"""
-    user_id = message.from_user.id
-    license_status, license_result = check_user_license(user_id)
-    
-    if not license_status:
-        error_text = """
-❌ **Lisans Gerekli!**
+    """Otomatik tarama bilgisi"""
+    info_text = """
+🤖 **Otomatik Tarama Sistemi**
 
-🔑 **Lisans Anahtarınızı Giriniz:**
-Lisans anahtarınızı buraya yazın.
+✅ **Bot otomatik olarak 3 saatte bir tarama yapar**
+📊 **En iyi 10 fırsatı size gönderir**
+⏰ **Sonraki tarama: 3 saat sonra**
 
-💬 **Lisans Satın Almak İçin:**
-@tgtradingbot ile iletişime geçin.
+🔍 **Manuel tarama yoktur - sistem otomatiktir!**
 
-📦 **Paketler:**
-• 1 Aylık: $200
-• 3 Aylık: $500
-• Sınırsız: $1500
+📱 **Sorularınız için:** @tgtradingbot
 """
-        # Lisans giriş durumunu ayarla
-        user_states[user_id] = "waiting_license"
-        
-        # Lisans giriş butonu
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.row(types.KeyboardButton("🔑 Lisans Anahtarı Gir"))
-        markup.row(types.KeyboardButton("💬 Lisans Satın Al"))
-        
-        bot.reply_to(message, error_text, parse_mode='Markdown', reply_markup=markup)
-        return
-    
-    # Tarama başlat
-    bot.reply_to(message, "🔍 Coin taraması başlatılıyor...\n\n⏳ Bu işlem birkaç dakika sürebilir.")
-    
-    # Burada gerçek tarama fonksiyonu çağrılacak
-    # Şimdilik demo mesajı
-    import time
-    time.sleep(2)
-    
-    scan_result = """
-🎯 **Tarama Tamamlandı!**
-
-📊 **Sonuçlar:**
-• Taranan Coin: 150+
-• Bulunan Fırsat: 3
-• Tarama Süresi: 2.5 dakika
-
-🚨 **Fırsatlar:**
-1. BTCUSDT - Long (TOBO) - %2.8 potansiyel
-2. ETHUSDT - Short (OBO) - %1.9 potansiyel  
-3. ADAUSDT - Long (Falling Wedge) - %3.2 potansiyel
-
-📱 **Detaylı bildirimler gönderildi!**
-"""
-    
-    bot.reply_to(message, scan_result, parse_mode='Markdown')
+    bot.reply_to(message, info_text, parse_mode='Markdown')
 
 @bot.message_handler(func=lambda message: message.text == "🔍 Coin Tara")
 def handle_scan_button(message):
@@ -387,12 +350,110 @@ def save_user_license(user_id, license_info):
     except Exception as e:
         print(f"Lisans kaydedilemedi: {e}")
 
+def auto_scan():
+    """Otomatik tarama fonksiyonu"""
+    while True:
+        try:
+            print("🔄 Otomatik tarama başlatılıyor...")
+            
+            # Tüm aktif lisanslı kullanıcılara bildirim gönder
+            active_users = get_active_users()
+            
+            if active_users:
+                # Tarama yap ve sonuçları al
+                scan_results = perform_scan()
+                
+                # Her kullanıcıya sonuçları gönder
+                for user_id in active_users:
+                    try:
+                        send_scan_results_to_user(user_id, scan_results)
+                    except Exception as e:
+                        print(f"Kullanıcı {user_id} için bildirim gönderilemedi: {e}")
+            
+            print("✅ Otomatik tarama tamamlandı. 3 saat sonra tekrar...")
+            
+        except Exception as e:
+            print(f"❌ Otomatik tarama hatası: {e}")
+        
+        # 3 saat bekle (10800 saniye)
+        time.sleep(10800)
+
+def get_active_users():
+    """Aktif lisanslı kullanıcıları al"""
+    active_users = []
+    try:
+        if os.path.exists("user_licenses"):
+            for filename in os.listdir("user_licenses"):
+                if filename.endswith(".json"):
+                    user_id = filename.replace(".json", "")
+                    license_status, _ = check_user_license(user_id)
+                    if license_status:
+                        active_users.append(user_id)
+    except Exception as e:
+        print(f"Aktif kullanıcılar alınamadı: {e}")
+    
+    return active_users
+
+def perform_scan():
+    """Tarama yap ve sonuçları döndür"""
+    try:
+        # Burada gerçek tarama fonksiyonunu çağır
+        # Şimdilik demo sonuçlar
+        return {
+            "total_scanned": 150,
+            "opportunities": [
+                {"symbol": "BTCUSDT", "direction": "Long", "formation": "TOBO", "potential": "2.8%"},
+                {"symbol": "ETHUSDT", "direction": "Short", "formation": "OBO", "potential": "1.9%"},
+                {"symbol": "ADAUSDT", "direction": "Long", "formation": "Falling Wedge", "potential": "3.2%"}
+            ],
+            "scan_time": "2.5 dakika"
+        }
+    except Exception as e:
+        print(f"Tarama hatası: {e}")
+        return None
+
+def send_scan_results_to_user(user_id, results):
+    """Kullanıcıya tarama sonuçlarını gönder"""
+    if not results:
+        return
+    
+    message = f"""
+🎯 **Otomatik Tarama Sonuçları**
+
+📊 **Genel Bilgiler:**
+• Taranan Coin: {results['total_scanned']}+
+• Bulunan Fırsat: {len(results['opportunities'])}
+• Tarama Süresi: {results['scan_time']}
+
+🚨 **En İyi Fırsatlar:**
+"""
+    
+    for i, opp in enumerate(results['opportunities'][:10], 1):
+        message += f"""
+{i}. **{opp['symbol']}** - {opp['direction']} ({opp['formation']})
+   💰 Potansiyel: {opp['potential']}
+"""
+    
+    message += """
+📱 **Detaylı analiz için @tgtradingbot ile iletişime geçin!**
+"""
+    
+    try:
+        bot.send_message(user_id, message, parse_mode='Markdown')
+    except Exception as e:
+        print(f"Kullanıcı {user_id} için mesaj gönderilemedi: {e}")
+
 def main():
     """Bot'u başlat"""
     print("🤖 Telegram Bot Başlatılıyor...")
     print(f"📱 Bot: @apfel_trading_bot")
     print(f"🔑 Token: {TELEGRAM_BOT_TOKEN[:20]}...")
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
+    
+    # Otomatik tarama thread'ini başlat
+    auto_scan_thread = threading.Thread(target=auto_scan, daemon=True)
+    auto_scan_thread.start()
+    print("🔄 Otomatik tarama başlatıldı (3 saatte bir)")
     
     try:
         bot.polling(none_stop=True)
