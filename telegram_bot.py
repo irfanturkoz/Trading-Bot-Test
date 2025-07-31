@@ -687,7 +687,8 @@ def perform_scan():
                     'tpfark': abs(best_formation['tp'] - current_price) / current_price,
                     'risk_analysis': risk_analysis,
                     'signal_strength': min(95, signal_strength),
-                    'rr_ratio': best_rr
+                    'rr_ratio': best_rr,
+                    'tp_levels': None  # botanlik2.py'den gelecek
                 }
                 
             except Exception as e:
@@ -788,13 +789,19 @@ def send_scan_results_to_user(user_id, results):
         tp_str = format_price_display(tp)
         sl_str = format_price_display(sl)
         
-        # Risk analizi
+        # Risk analizi - botanlik2.py'den gelen veriyi doğru kullan
         leverage = risk_analysis.get('leverage', '5x')
         position_size = risk_analysis.get('position_size', 'Kasanın %5\'i')
         potential_gain = risk_analysis.get('potential_gain', '%0.0')
         risk_amount = risk_analysis.get('risk_amount', '%0.0')
         max_loss = risk_analysis.get('max_loss', '%0.0')
-        risk_reward = risk_analysis.get('risk_reward', '0.0:1')
+        
+        # R/R oranını botanlik2.py'den al, yoksa hesapla
+        if 'rr_ratio' in opp:
+            rr_ratio = opp['rr_ratio']
+            risk_reward = f"{rr_ratio:.1f}:1"
+        else:
+            risk_reward = risk_analysis.get('risk_reward', '0.0:1')
         
         # Sinyal gücü emoji
         if signal_strength >= 80:
@@ -810,13 +817,23 @@ def send_scan_results_to_user(user_id, results):
             strength_emoji = "📈"
             strength_text = "ZAYIF"
         
+        # TP seviyeleri varsa göster
+        tp_levels_text = ""
+        if 'tp_levels' in opp and opp['tp_levels']:
+            tp_levels = opp['tp_levels']
+            tp_levels_text = f"""
+   🎯 3 TP SEVİYESİ:
+      TP1 (İlk Kâr): {format_price_display(tp_levels.get('tp1', tp))} | +%{tpfark*100:.1f}
+      TP2 (Orta Kâr): {format_price_display(tp_levels.get('tp2', tp))} | +%{(tp_levels.get('tp2', tp)/price-1)*100:.1f}
+      TP3 (Maksimum): {format_price_display(tp_levels.get('tp3', tp))} | +%{(tp_levels.get('tp3', tp)/price-1)*100:.1f}"""
+        
         message += f"""
 {i}. **{symbol}** - {direction} ({formation})
    💰 Fiyat: {price_str} | TP: {tp_str} | SL: {sl_str}
    📊 Potansiyel: %{tpfark*100:.2f} | R/R: {risk_reward} ✅
    ⚡ Kaldıraç: {leverage} | Pozisyon: {position_size}
    🎯 Hedef: {potential_gain} | Risk: {risk_amount}
-   🔒 Margin: ISOLATED | Max Kayıp: {max_loss}
+   🔒 Margin: ISOLATED | Max Kayıp: {max_loss}{tp_levels_text}
    {strength_emoji} Sinyal Gücü: {strength_text} (%{signal_strength})
    ✅ FUTURES İŞLEM AÇILABİLİR!
 """
