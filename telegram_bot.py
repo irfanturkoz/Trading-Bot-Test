@@ -555,8 +555,8 @@ def perform_simple_test():
         test_results = [
             {
                 'symbol': 'BTCUSDT',
-                'direction': 'Long',
-                'formation': 'TOBO',
+                'yön': 'Long',
+                'formasyon': 'TOBO',
                 'price': 50000,
                 'tp': 52000,
                 'sl': 48000,
@@ -573,8 +573,8 @@ def perform_simple_test():
             },
             {
                 'symbol': 'ETHUSDT',
-                'direction': 'Short',
-                'formation': 'OBO',
+                'yön': 'Short',
+                'formasyon': 'OBO',
                 'price': 3000,
                 'tp': 2850,
                 'sl': 3150,
@@ -592,7 +592,11 @@ def perform_simple_test():
         ]
         
         print(f"✅ Test sonucu: {len(test_results)} fırsat")
-        return test_results
+        return {
+            "total_scanned": 2,
+            "opportunities": test_results,
+            "scan_time": "0 dakika 5 saniye"
+        }
         
     except Exception as e:
         print(f"❌ Test hatası: {e}")
