@@ -18,7 +18,6 @@ user_states = {}
 # Otomatik tarama için
 import threading
 import time
-from botanlik import main as scan_main
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
