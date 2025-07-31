@@ -784,13 +784,13 @@ def main():
     print("="*60)
     
     interval = '4h'
-            print("\n🤖 Otomatik Tarama Botu Başlatılıyor...")
-        print("📊 Bot her fırsat için en uygun risk seviyesini otomatik önerecek")
-        print("💰 Risk seviyesi: Kaldıraç, pozisyon büyüklüğü ve potansiyel kazanç")
-        print("🎯 R/R Filtresi: 0.5:1'den yüksek risk/ödül oranına sahip sinyaller gösterilecek")
-        print("📱 Telegram Bildirimleri: Aktif")
-        print("⏱️ Tarama Süresi: 80-90 saniye (tüm coinler analiz edilecek)")
-        print("\nESC'ye basarak çıkabilirsiniz. Tarama her 3 saatte bir otomatik tekrar edecek.")
+    print("\n🤖 Otomatik Tarama Botu Başlatılıyor...")
+    print("📊 Bot her fırsat için en uygun risk seviyesini otomatik önerecek")
+    print("💰 Risk seviyesi: Kaldıraç, pozisyon büyüklüğü ve potansiyel kazanç")
+    print("🎯 R/R Filtresi: 0.5:1'den yüksek risk/ödül oranına sahip sinyaller gösterilecek")
+    print("📱 Telegram Bildirimleri: Aktif")
+    print("⏱️ Tarama Süresi: 80-90 saniye (tüm coinler analiz edilecek)")
+    print("\nESC'ye basarak çıkabilirsiniz. Tarama her 3 saatte bir otomatik tekrar edecek.")
     
     # Bot başlangıç bildirimi
     try:
