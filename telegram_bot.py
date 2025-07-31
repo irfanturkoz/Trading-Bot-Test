@@ -302,21 +302,21 @@ def handle_license_input(message):
     else:
         # Lisans geçersiz
         error_text = f"""
-❌ **Yanlış Lisans Anahtarı!**
+❌ Yanlış Lisans Anahtarı!
 
-🔑 **Gönderilen:** `{license_key}`
+🔑 Gönderilen: {license_key}
 
-⚠️ **Bu lisans anahtarı geçersiz!**
+⚠️ Bu lisans anahtarı geçersiz!
 
-💬 **Lisans Satın Almak İçin:**
+💬 Lisans Satın Almak İçin:
 @tgtradingbot ile iletişime geçin.
 
-📦 **Paketler:**
+📦 Paketler:
 • 1 Aylık: $200
 • 3 Aylık: $500
 • Sınırsız: $1500
 
-🔑 **Tekrar denemek için lisans anahtarınızı gönderin:**
+🔑 Tekrar denemek için lisans anahtarınızı gönderin:
 """
         
         # Lisans giriş durumunu koru
@@ -327,7 +327,7 @@ def handle_license_input(message):
         markup.row(types.KeyboardButton("🔑 Lisans Anahtarı Gir"))
         markup.row(types.KeyboardButton("💬 Lisans Satın Al"))
         
-        bot.reply_to(message, error_text, parse_mode='Markdown', reply_markup=markup)
+        bot.reply_to(message, error_text, reply_markup=markup)
     
     # Kullanıcı durumunu temizle
     user_states.pop(user_id, None)
