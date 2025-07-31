@@ -584,7 +584,7 @@ def perform_scan():
                         'sl': falling_wedge.get('sl', current_price * 0.95)
                     })
                 
-                if rectangle:
+                if rectangle and 'resistance' in rectangle and 'support' in rectangle:
                     formations.append({
                         'type': 'Rectangle',
                         'data': rectangle,
@@ -593,7 +593,7 @@ def perform_scan():
                         'sl': rectangle['support'] if current_price > rectangle['resistance'] else rectangle['resistance']
                     })
                 
-                if ascending_triangle:
+                if ascending_triangle and 'resistance' in ascending_triangle and 'support' in ascending_triangle:
                     formations.append({
                         'type': 'Ascending Triangle',
                         'data': ascending_triangle,
@@ -602,7 +602,7 @@ def perform_scan():
                         'sl': ascending_triangle['support']
                     })
                 
-                if descending_triangle:
+                if descending_triangle and 'support' in descending_triangle and 'resistance' in descending_triangle:
                     formations.append({
                         'type': 'Descending Triangle',
                         'data': descending_triangle,
@@ -611,7 +611,7 @@ def perform_scan():
                         'sl': descending_triangle['resistance']
                     })
                 
-                if symmetrical_triangle:
+                if symmetrical_triangle and 'upper' in symmetrical_triangle and 'lower' in symmetrical_triangle:
                     formations.append({
                         'type': 'Symmetrical Triangle',
                         'data': symmetrical_triangle,
@@ -620,7 +620,7 @@ def perform_scan():
                         'sl': symmetrical_triangle['lower']
                     })
                 
-                if broadening:
+                if broadening and 'current_resistance' in broadening and 'current_support' in broadening:
                     formations.append({
                         'type': 'Broadening Formation',
                         'data': broadening,
@@ -652,7 +652,7 @@ def perform_scan():
                         else:
                             continue
                     
-                    if rr > best_rr and rr >= 0.5:  # Minimum 0.5:1 R/R
+                    if rr > best_rr and rr >= 0.5 and rr <= 3.0:  # Minimum 0.5:1, Maksimum 3:1 R/R
                         best_rr = rr
                         best_formation = formation
                 
