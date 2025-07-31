@@ -35,12 +35,26 @@ def run_bot():
     while True:
         try:
             print("🔄 Bot polling başlatılıyor...")
+            # Önce webhook'u temizle
+            try:
+                bot.remove_webhook()
+                print("✅ Webhook temizlendi")
+            except:
+                pass
+            
+            # Bot'u başlat
             bot.polling(none_stop=True, timeout=60)
         except Exception as e:
             print(f"❌ Bot hatası: {e}")
             if "Conflict: terminated by other getUpdates request" in str(e):
-                print("⚠️ Diğer bot instance'ı tespit edildi. 30 saniye bekleniyor...")
-                time.sleep(30)
+                print("⚠️ Diğer bot instance'ı tespit edildi. 60 saniye bekleniyor...")
+                # Webhook'u zorla temizle
+                try:
+                    bot.remove_webhook()
+                    print("✅ Webhook zorla temizlendi")
+                except:
+                    pass
+                time.sleep(60)
             else:
                 time.sleep(10)
             print("🔄 Bot yeniden başlatılıyor...")
@@ -48,6 +62,8 @@ def run_bot():
 # Webhook ayarlanmamışsa polling kullan
 if not setup_webhook():
     print("🔄 Webhook ayarlanamadı, polling kullanılıyor...")
+    # Conflict durumunda daha uzun bekle
+    time.sleep(10)
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
 else:
