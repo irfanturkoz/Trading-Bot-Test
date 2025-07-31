@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🤖 Trading Bot - Telegram
 
 Otomatik coin tarama ve formasyon analizi yapan Telegram bot'u.
@@ -41,3 +42,6 @@ git push origin main
 
 ## 💬 İletişim
 @tgtradingbot 
+=======
+# Trading-Bot-Test
+>>>>>>> fb81bf1919c1c18379c002f9e266a74437e82152

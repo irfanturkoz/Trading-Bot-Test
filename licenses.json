@@ -86,5 +86,29 @@
       "Telegram Bildirimleri",
       "Formasyon Analizi"
     ]
+  },
+  "UNLIMITED_20250731_183021_A3FH8U": {
+    "type": "unlimited",
+    "duration": -1,
+    "price": 1500,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek",
+      "\u00d6zel Formasyonlar",
+      "7/24 Destek"
+    ]
+  },
+  "QUARTERLY_20250731_183114_CZ3BYF": {
+    "type": "quarterly",
+    "duration": 90,
+    "price": 500,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek"
+    ]
   }
 }

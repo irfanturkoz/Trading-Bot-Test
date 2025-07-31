@@ -304,7 +304,7 @@ def handle_license_input(message):
         error_text = f"""
 ❌ **Yanlış Lisans Anahtarı!**
 
-🔑 **Gönderilen:** {license_key}
+🔑 **Gönderilen:** `{license_key}`
 
 ⚠️ **Bu lisans anahtarı geçersiz!**
 
