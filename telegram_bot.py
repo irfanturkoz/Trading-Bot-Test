@@ -262,7 +262,7 @@ def handle_license_input(message):
         bot.send_message(ADMIN_CHAT_ID, admin_notification, parse_mode='Markdown')
         
         # İlk taramayı hemen başlat
-        bot.send_message(user_id, "🚀 **İlk tarama başlatılıyor...**", parse_mode='Markdown')
+        bot.send_message(user_id, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 3-5 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
         
         try:
             # İlk tarama yap
@@ -384,6 +384,13 @@ def auto_scan():
                     # Her kullanıcıya sonuçları gönder
                     for user_id in active_users:
                         try:
+                            # Tarama başlama mesajı gönder
+                            bot.send_message(user_id, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 3-5 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
+                            
+                            # Kısa bir bekleme (tarama simülasyonu)
+                            time.sleep(2)
+                            
+                            # Tarama sonuçlarını gönder
                             send_scan_results_to_user(user_id, scan_results)
                             print(f"✅ Kullanıcı {user_id} için tarama gönderildi")
                         except Exception as e:
@@ -423,8 +430,8 @@ def perform_scan():
         import random
         import time
         
-        # Simüle edilmiş tarama süresi
-        time.sleep(1)  # Gerçek tarama simülasyonu
+        # Simüle edilmiş tarama süresi (3-5 dakika simülasyonu)
+        time.sleep(3)  # Gerçek tarama simülasyonu
         
         # Rastgele fırsatlar oluştur
         symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT", "UNIUSDT", "AAVEUSDT", "SOLUSDT", "MATICUSDT", "AVAXUSDT"]
