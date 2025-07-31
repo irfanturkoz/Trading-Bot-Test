@@ -198,16 +198,25 @@ def start_scan_async(message):
     bot.reply_to(message, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 2-3 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
     
     try:
+        print(f"🔍 Tarama başlatılıyor - Kullanıcı: {user_id}")
+        
         # Tarama yap
         scan_results = perform_scan()
-        if scan_results:
+        print(f"📊 Tarama sonucu: {scan_results}")
+        
+        if scan_results and len(scan_results) > 0:
+            print(f"✅ {len(scan_results)} fırsat bulundu")
             send_scan_results_to_user(user_id, scan_results)
             # Son tarama zamanını kaydet
             save_last_scan_time(user_id)
             bot.send_message(user_id, "✅ **Tarama tamamlandı!**\n\n⏰ **Sonraki tarama: 3 saat sonra**", parse_mode='Markdown')
         else:
+            print("❌ Tarama sonucu boş")
             bot.send_message(user_id, "❌ **Tarama başarısız oldu. Lütfen tekrar deneyin.**", parse_mode='Markdown')
     except Exception as e:
+        print(f"❌ Tarama hatası: {e}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
         bot.send_message(user_id, f"❌ **Tarama hatası:** {e}", parse_mode='Markdown')
 
 @bot.message_handler(func=lambda message: message.text == "📊 Lisans Durumu")
@@ -537,6 +546,58 @@ def is_license_already_used(license_key, current_user_id):
         print(f"Lisans kontrol hatası: {e}")
         return False  # Hata varsa kullanılabilir
 
+def perform_simple_test():
+    """Basit test fonksiyonu"""
+    try:
+        print("🧪 Basit test başlatılıyor...")
+        
+        # Test verileri
+        test_results = [
+            {
+                'symbol': 'BTCUSDT',
+                'direction': 'Long',
+                'formation': 'TOBO',
+                'price': 50000,
+                'tp': 52000,
+                'sl': 48000,
+                'tpfark': 0.04,
+                'risk_analysis': {
+                    'leverage': '5x',
+                    'position_size': 'Kasanın %5\'i',
+                    'potential_gain': '%4.0',
+                    'risk_amount': '%1.0',
+                    'max_loss': '%1.0'
+                },
+                'signal_strength': 85,
+                'rr_ratio': 4.0
+            },
+            {
+                'symbol': 'ETHUSDT',
+                'direction': 'Short',
+                'formation': 'OBO',
+                'price': 3000,
+                'tp': 2850,
+                'sl': 3150,
+                'tpfark': 0.05,
+                'risk_analysis': {
+                    'leverage': '3x',
+                    'position_size': 'Kasanın %3\'ü',
+                    'potential_gain': '%5.0',
+                    'risk_amount': '%1.5',
+                    'max_loss': '%1.5'
+                },
+                'signal_strength': 78,
+                'rr_ratio': 3.3
+            }
+        ]
+        
+        print(f"✅ Test sonucu: {len(test_results)} fırsat")
+        return test_results
+        
+    except Exception as e:
+        print(f"❌ Test hatası: {e}")
+        return None
+
 def perform_scan():
     """botanlik2.py ile gerçek analiz"""
     try:
@@ -548,6 +609,13 @@ def perform_scan():
         start_time = time.time()
         
         print("🔍 Import işlemleri başlatılıyor...")
+        
+        # Önce basit test yap
+        print("🧪 Basit test başlatılıyor...")
+        test_results = perform_simple_test()
+        if test_results:
+            print("✅ Basit test başarılı")
+            return test_results
         
         try:
             # botanlik2.py'den gerekli fonksiyonları import et
