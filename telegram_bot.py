@@ -207,9 +207,9 @@ def handle_buy_license(message):
 💬 **Lisans Satın Alma**
 
 📦 **Paketler:**
-• 1 Aylık: $200
-• 3 Aylık: $500 (İndirimli)
-• Sınırsız: $1500
+• 1 Aylık: $100
+• 3 Aylık: $200 (İndirimli)
+• Sınırsız: $500
 
 ✅ **Özellikler:**
 • Otomatik coin tarama
@@ -218,7 +218,7 @@ def handle_buy_license(message):
 • Risk/ödül hesaplama
 • 3 TP seviyesi
 
-🔗 **İletişim:** @tgtradingbot
+🔗 **İletişim:** @ApfelTradingAdmin
 """
     bot.reply_to(message, buy_text, parse_mode='Markdown')
 
@@ -256,6 +256,8 @@ def handle_license_input(message):
 
 🔍 **Coin Tara** butonuna basarak tarama başlatabilirsiniz.
 ⏰ **Her 3 saatte bir tarama yapabilirsiniz.**
+
+📱 **Destek:** @ApfelTradingAdmin
 """
         
         # Ana menü butonları
@@ -839,7 +841,7 @@ def send_scan_results_to_user(user_id, results):
 """
     
     message += """
-📱 **Detaylı analiz için @tgtradingbot ile iletişime geçin!**
+📱 **Detaylı analiz için @ApfelTradingAdmin ile iletişime geçin!**
 """
     
     try:

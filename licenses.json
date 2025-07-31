@@ -2,7 +2,7 @@
   "MONTHLY_2024_001": {
     "type": "monthly",
     "duration": 30,
-    "price": 200,
+    "price": 100,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -12,7 +12,7 @@
   "MONTHLY_2024_002": {
     "type": "monthly",
     "duration": 30,
-    "price": 200,
+    "price": 100,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -22,7 +22,7 @@
   "QUARTERLY_2024_001": {
     "type": "quarterly",
     "duration": 90,
-    "price": 500,
+    "price": 200,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -33,7 +33,7 @@
   "QUARTERLY_2024_002": {
     "type": "quarterly",
     "duration": 90,
-    "price": 500,
+    "price": 200,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -44,7 +44,7 @@
   "UNLIMITED_2024_001": {
     "type": "unlimited",
     "duration": -1,
-    "price": 1500,
+    "price": 500,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -57,7 +57,7 @@
   "UNLIMITED_2024_002": {
     "type": "unlimited",
     "duration": -1,
-    "price": 1500,
+    "price": 500,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -70,7 +70,7 @@
   "UNLIMITED_20250731_190345_ECJOW": {
     "type": "unlimited",
     "duration": -1,
-    "price": 1500,
+    "price": 500,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
@@ -83,7 +83,7 @@
   "MONTHLY_20250731_200418_9CQH08": {
     "type": "monthly",
     "duration": 30,
-    "price": 200,
+    "price": 100,
     "features": [
       "Temel Tarama",
       "Telegram Bildirimleri",
