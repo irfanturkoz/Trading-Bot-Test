@@ -107,5 +107,23 @@
     "activated": true,
     "activation_date": "2025-07-31T20:00:00",
     "expiry_date": null
+  } , 
+  "UnalBaba": {
+    "type": "unlimited",
+    "duration": -1,
+    "price": 0,
+    "features": [
+      "Temel Tarama",
+      "Telegram Bildirimleri",
+      "Formasyon Analizi",
+      "\u00d6ncelikli Destek",
+      "\u00d6zel Formasyonlar",
+      "7/24 Destek",
+      "Admin \u00d6zellikleri",
+      "S\u0131n\u0131rs\u0131z Kullan\u0131m"
+    ],
+    "activated": true,
+    "activation_date": "2025-07-31T20:00:00",
+    "expiry_date": null
   }
 }
