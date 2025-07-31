@@ -478,24 +478,41 @@ def perform_scan():
     try:
         import time
         import random
+        import traceback
         
         # Tarama başlangıç zamanı
         start_time = time.time()
         
-        # botanlik2.py'den gerekli fonksiyonları import et
-        from botanlik2 import get_usdt_symbols, get_current_price, calculate_optimal_risk
-        from botanlik2 import find_all_tobo, find_all_obo, detect_falling_wedge
-        from botanlik2 import find_rectangle, find_ascending_triangle, find_descending_triangle
-        from botanlik2 import find_symmetrical_triangle, find_broadening_formation
-        from botanlik2 import calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands
-        from botanlik2 import calculate_stochastic, calculate_adx, format_price
-        from data_fetcher import fetch_ohlcv
+        print("🔍 Import işlemleri başlatılıyor...")
+        
+        try:
+            # botanlik2.py'den gerekli fonksiyonları import et
+            from botanlik2 import get_usdt_symbols, get_current_price, calculate_optimal_risk
+            from botanlik2 import find_all_tobo, find_all_obo, detect_falling_wedge
+            from botanlik2 import find_rectangle, find_ascending_triangle, find_descending_triangle
+            from botanlik2 import find_symmetrical_triangle, find_broadening_formation
+            from botanlik2 import calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands
+            from botanlik2 import calculate_stochastic, calculate_adx, format_price
+            from data_fetcher import fetch_ohlcv
+            print("✅ Import işlemleri başarılı")
+        except Exception as import_error:
+            print(f"❌ Import hatası: {import_error}")
+            print(f"🔍 Traceback: {traceback.format_exc()}")
+            print("🔄 Basit analiz moduna geçiliyor...")
+            
+            # Basit analiz modu
+            return perform_simple_scan()
         
         print("🔍 botanlik2.py ile gerçek analiz başlatılıyor...")
         
-        # Tüm USDT sembollerini al
-        symbols = get_usdt_symbols()
-        print(f"📊 {len(symbols)} coin analiz ediliyor...")
+        try:
+            # Tüm USDT sembollerini al
+            symbols = get_usdt_symbols()
+            print(f"📊 {len(symbols)} coin analiz ediliyor...")
+        except Exception as symbols_error:
+            print(f"❌ Sembol alma hatası: {symbols_error}")
+            print(f"🔍 Traceback: {traceback.format_exc()}")
+            return None
         
         firsatlar = []
         
@@ -719,7 +736,8 @@ def perform_scan():
         }
         
     except Exception as e:
-        print(f"Tarama hatası: {e}")
+        print(f"❌ Tarama hatası: {e}")
+        print(f"🔍 Detaylı hata: {traceback.format_exc()}")
         return None
 
 def send_scan_results_to_user(user_id, results):

@@ -4,7 +4,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from data_fetcher import fetch_ohlcv
 from formation_detector import find_all_tobo, find_all_obo, detect_falling_wedge, calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands, calculate_stochastic, calculate_adx, analyze_all_formations, analyze_all_formations_advanced, detect_cup_and_handle, detect_bullish_bearish_flag_advanced, detect_rising_wedge, calculate_ichimoku, calculate_supertrend, calculate_vwap, calculate_obv, calculate_heikin_ashi
 # from bot import format_price  # bot.py dosyası yok, bot_backup.py var
-import msvcrt
+try:
+    import msvcrt
+except ImportError:
+    # Linux/Mac için msvcrt yok, dummy fonksiyon
+    def msvcrt():
+        return None
 import pandas as pd
 import numpy as np
 
