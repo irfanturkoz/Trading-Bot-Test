@@ -2,49 +2,28 @@ from flask import Flask, request, jsonify
 import os
 import threading
 import time
+import subprocess
+import sys
 
 app = Flask(__name__)
 
-# Bot'u ayrı bir thread'de başlat
-def start_bot():
-    print("🤖 Bot başlatılıyor...")
+# Bot'u ayrı bir process'te başlat
+def start_bot_process():
+    print("🤖 Bot process başlatılıyor...")
     
-    # Daha uzun bekle
-    print("⏳ 30 saniye bekleniyor...")
-    time.sleep(30)
-    
+    # Bot'u ayrı bir Python process'inde çalıştır
     try:
-        from telegram_bot import bot
-        print("✅ Bot import edildi")
-        
-        # Webhook'u zorla temizle
-        try:
-            bot.remove_webhook()
-            print("✅ Webhook temizlendi")
-        except Exception as e:
-            print(f"⚠️ Webhook temizleme hatası: {e}")
-        
-        # Bot'u başlat
-        print("🔄 Bot polling başlatılıyor...")
-        bot.polling(none_stop=True, timeout=60)
-        
+        # telegram_bot.py dosyasını doğrudan çalıştır
+        subprocess.Popen([sys.executable, "telegram_bot.py"], 
+                        stdout=subprocess.PIPE, 
+                        stderr=subprocess.PIPE)
+        print("✅ Bot process başlatıldı")
     except Exception as e:
-        print(f"❌ Bot hatası: {e}")
-        if "Conflict: terminated by other getUpdates request" in str(e):
-            print("⚠️ Diğer bot instance'ı tespit edildi!")
-            print("🔄 300 saniye (5 dakika) bekleniyor...")
-            time.sleep(300)
-            # Tekrar dene
-            start_bot()
-        else:
-            print("🔄 60 saniye bekleniyor...")
-            time.sleep(60)
-            start_bot()
+        print(f"❌ Bot process hatası: {e}")
 
-# Bot thread'ini başlat
-print("🚀 Bot thread'i başlatılıyor...")
-bot_thread = threading.Thread(target=start_bot, daemon=True)
-bot_thread.start()
+# Bot process'ini başlat
+print("🚀 Bot process'i başlatılıyor...")
+start_bot_process()
 
 @app.route('/')
 def home():

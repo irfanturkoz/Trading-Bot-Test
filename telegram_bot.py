@@ -891,7 +891,6 @@ def main():
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
 
-# Sadece doğrudan çalıştırıldığında bot'u başlat
-# Railway'de app.py üzerinden çalıştırılacağı için bu kısmı devre dışı bırakıyoruz
-# if __name__ == "__main__":
-#     main() 
+# Bot'u başlat
+if __name__ == "__main__":
+    main() 
