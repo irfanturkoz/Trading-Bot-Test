@@ -182,7 +182,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # Tab'lar
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "➕ Yeni Lisans", "📋 Lisanslar", "⚙️ Ayarlar"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "➕ Yeni Lisans", "📋 Lisanslar", "🗑️ Lisans Sil", "⚙️ Ayarlar"])
     
     with tab1:
         st.header("📊 Dashboard")
@@ -338,6 +338,82 @@ def main():
             st.warning("🔍 Arama kriterlerine uygun lisans bulunamadı.")
     
     with tab4:
+        st.header("🗑️ Lisans Silme")
+        
+        if not admin.license_manager.valid_licenses:
+            st.warning("❌ Silinecek lisans bulunamadı!")
+        else:
+            # Lisansları listele
+            st.subheader("📋 Mevcut Lisanslar")
+            
+            licenses_for_deletion = []
+            for key, info in admin.license_manager.valid_licenses.items():
+                licenses_for_deletion.append({
+                    "Anahtar": key,
+                    "Kısa Anahtar": key[:20] + "...",
+                    "Tip": info['type'].upper(),
+                    "Fiyat": f"${info['price']}",
+                    "Süre": f"{info['duration']} gün" if info['duration'] != -1 else "Sınırsız"
+                })
+            
+            df_deletion = pd.DataFrame(licenses_for_deletion)
+            st.dataframe(df_deletion, use_container_width=True)
+            
+            # Silme seçimi
+            st.subheader("🗑️ Silme İşlemi")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if licenses_for_deletion:
+                    selected_index = st.selectbox(
+                        "Silmek istediğiniz lisansı seçin:",
+                        range(len(licenses_for_deletion)),
+                        format_func=lambda x: f"{licenses_for_deletion[x]['Kısa Anahtar']} - {licenses_for_deletion[x]['Tip']} (${licenses_for_deletion[x]['Fiyat'].replace('$', '')})"
+                    )
+                    
+                    selected_license = licenses_for_deletion[selected_index]
+                    
+                    st.info(f"""
+                    **Seçilen Lisans:**
+                    - Anahtar: {selected_license['Anahtar']}
+                    - Tip: {selected_license['Tip']}
+                    - Fiyat: {selected_license['Fiyat']}
+                    - Süre: {selected_license['Süre']}
+                    """)
+            
+            with col2:
+                st.subheader("⚠️ Uyarı")
+                st.warning("""
+                **Lisans silme işlemi geri alınamaz!**
+                
+                Bu işlem:
+                - Lisansı kalıcı olarak siler
+                - Kullanıcılar bu lisansı kullanamaz
+                - Veri kaybına neden olabilir
+                """)
+            
+            # Silme butonu
+            if st.button("🗑️ Lisansı Sil", type="secondary", help="Bu işlem geri alınamaz!"):
+                try:
+                    # Seçilen lisansı sil
+                    license_key = selected_license['Anahtar']
+                    del admin.license_manager.valid_licenses[license_key]
+                    
+                    # Dosyaya kaydet
+                    success, message = admin.save_licenses_to_file()
+                    
+                    if success:
+                        st.success(f"✅ Lisans başarıyla silindi!")
+                        st.info(f"🗑️ Silinen: {selected_license['Kısa Anahtar']}")
+                        st.rerun()  # Sayfayı yenile
+                    else:
+                        st.error(f"❌ Kaydetme hatası: {message}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Silme hatası: {e}")
+    
+    with tab5:
         st.header("⚙️ Ayarlar")
         
         col1, col2 = st.columns(2)

@@ -119,8 +119,10 @@ class AdminPanel:
             with open("licenses.json", "w") as f:
                 json.dump(self.license_manager.valid_licenses, f, indent=2)
             print("💾 Lisanslar kaydedildi.")
+            return True, "Lisanslar başarıyla kaydedildi."
         except Exception as e:
             print(f"❌ Lisanslar kaydedilemedi: {e}")
+            return False, f"Lisanslar kaydedilemedi: {e}"
     
     def load_licenses_from_file(self):
         """Lisansları dosyadan yükler"""
@@ -129,8 +131,66 @@ class AdminPanel:
                 with open("licenses.json", "r") as f:
                     self.license_manager.valid_licenses = json.load(f)
                 print("📂 Lisanslar yüklendi.")
+                return True, "Lisanslar başarıyla yüklendi."
         except Exception as e:
             print(f"❌ Lisanslar yüklenemedi: {e}")
+            return False, f"Lisanslar yüklenemedi: {e}"
+    
+    def delete_license(self):
+        """Lisans silme fonksiyonu"""
+        print("\n" + "="*50)
+        print("🗑️ LİSANS SİLME")
+        print("="*50)
+        
+        if not self.license_manager.valid_licenses:
+            print("❌ Silinecek lisans bulunamadı!")
+            return
+        
+        # Mevcut lisansları listele
+        print("📋 Mevcut Lisanslar:")
+        for i, (key, info) in enumerate(self.license_manager.valid_licenses.items(), 1):
+            print(f"{i}. {key[:20]}... - {info['type'].upper()} (${info['price']})")
+        
+        try:
+            choice = input("\nSilmek istediğiniz lisansın numarasını girin (0 = İptal): ").strip()
+            
+            if choice == "0":
+                print("❌ İşlem iptal edildi.")
+                return
+            
+            choice_num = int(choice)
+            if choice_num < 1 or choice_num > len(self.license_manager.valid_licenses):
+                print("❌ Geçersiz numara!")
+                return
+            
+            # Seçilen lisansı al
+            license_key = list(self.license_manager.valid_licenses.keys())[choice_num - 1]
+            license_info = self.license_manager.valid_licenses[license_key]
+            
+            # Onay al
+            print(f"\n⚠️ Bu lisansı silmek istediğinizden emin misiniz?")
+            print(f"🔑 Anahtar: {license_key}")
+            print(f"📦 Tip: {license_info['type'].upper()}")
+            print(f"💰 Fiyat: ${license_info['price']}")
+            
+            confirm = input("\nOnaylamak için 'EVET' yazın: ").strip().upper()
+            
+            if confirm == "EVET":
+                # Lisansı sil
+                del self.license_manager.valid_licenses[license_key]
+                
+                # Dosyaya kaydet
+                self.save_licenses_to_file()
+                
+                print(f"✅ Lisans başarıyla silindi!")
+                print(f"🗑️ Silinen: {license_key[:20]}...")
+            else:
+                print("❌ İşlem iptal edildi.")
+                
+        except ValueError:
+            print("❌ Geçersiz numara!")
+        except Exception as e:
+            print(f"❌ Hata: {e}")
     
     def show_menu(self):
         """Ana menüyü gösterir"""
@@ -140,24 +200,27 @@ class AdminPanel:
             print("="*50)
             print("1. 📋 Tüm Lisansları Göster")
             print("2. ➕ Yeni Lisans Ekle")
-            print("3. 📊 Lisans İstatistikleri")
-            print("4. 💾 Lisansları Kaydet")
-            print("5. 📂 Lisansları Yükle")
-            print("6. ❌ Çıkış")
+            print("3. 🗑️ Lisans Sil")
+            print("4. 📊 Lisans İstatistikleri")
+            print("5. 💾 Lisansları Kaydet")
+            print("6. 📂 Lisansları Yükle")
+            print("7. ❌ Çıkış")
             
-            choice = input("\nSeçiminiz (1-6): ").strip()
+            choice = input("\nSeçiminiz (1-7): ").strip()
             
             if choice == "1":
                 self.show_all_licenses()
             elif choice == "2":
                 self.add_new_license()
             elif choice == "3":
-                self.show_statistics()
+                self.delete_license()
             elif choice == "4":
-                self.save_licenses_to_file()
+                self.show_statistics()
             elif choice == "5":
-                self.load_licenses_from_file()
+                self.save_licenses_to_file()
             elif choice == "6":
+                self.load_licenses_from_file()
+            elif choice == "7":
                 print("👋 Çıkılıyor...")
                 break
             else:
