@@ -355,12 +355,12 @@ def handle_license_input(message):
 ⚠️ Bu lisans anahtarı geçersiz!
 
 💬 Lisans Satın Almak İçin:
-@tgtradingbot ile iletişime geçin.
+@ApfelTradingAdmin ile iletişime geçin.
 
 📦 Paketler:
-• 1 Aylık: $200
-• 3 Aylık: $500
-• Sınırsız: $1500
+• 1 Aylık: $100
+• 3 Aylık: $200
+• Sınırsız: $500
 
 🔑 Tekrar denemek için lisans anahtarınızı gönderin:
 """
@@ -375,8 +375,9 @@ def handle_license_input(message):
         
         bot.reply_to(message, error_text, reply_markup=markup)
     
-    # Kullanıcı durumunu temizle
-    user_states.pop(user_id, None)
+    # Kullanıcı durumunu temizle - sadece başarılı lisans girişinde
+    if is_valid:
+        user_states.pop(user_id, None)
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
@@ -603,105 +604,48 @@ def perform_simple_test():
         return None
 
 def perform_scan():
-    """botanlik2.py ile gerçek analiz"""
+    """botanlik.py ile gerçek analiz"""
     try:
         import time
-        import random
         import traceback
         
         # Tarama başlangıç zamanı
         start_time = time.time()
         
-        print("🔍 Import işlemleri başlatılıyor...")
-        
-        # Önce basit test yap
-        print("🧪 Basit test başlatılıyor...")
-        test_results = perform_simple_test()
-        if test_results:
-            print("✅ Basit test başarılı")
-            return test_results
+        print("🔍 botanlik.py ile gerçek analiz başlatılıyor...")
         
         try:
-            # botanlik2.py'den gerekli fonksiyonları import et
-            from botanlik2 import get_usdt_symbols, get_current_price, calculate_optimal_risk
-            from botanlik2 import find_all_tobo, find_all_obo, detect_falling_wedge
-            from botanlik2 import find_rectangle, find_ascending_triangle, find_descending_triangle
-            from botanlik2 import find_symmetrical_triangle, find_broadening_formation
-            from botanlik2 import calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands
-            from botanlik2 import calculate_stochastic, calculate_adx, format_price
-            from data_fetcher import fetch_ohlcv
-            print("✅ Import işlemleri başarılı")
+            # botanlik.py'den get_scan_results fonksiyonunu import et
+            from botanlik import get_scan_results
+            print("✅ botanlik.py import başarılı")
         except Exception as import_error:
             print(f"❌ Import hatası: {import_error}")
             print(f"🔍 Traceback: {traceback.format_exc()}")
-            print("🔄 Basit analiz moduna geçiliyor...")
-            
-            # Basit analiz modu
-            return perform_simple_scan()
-        
-        print("🔍 botanlik2.py ile gerçek analiz başlatılıyor...")
-        
-        try:
-            # Tüm USDT sembollerini al
-            symbols = get_usdt_symbols()
-            print(f"📊 {len(symbols)} coin paralel analiz ediliyor...")
-        except Exception as symbols_error:
-            print(f"❌ Sembol alma hatası: {symbols_error}")
-            print(f"🔍 Traceback: {traceback.format_exc()}")
             return None
         
-        firsatlar = []
+        # botanlik.py'nin get_scan_results fonksiyonunu çağır
+        scan_results = get_scan_results()
         
-        # Paralel analiz ile tüm coinleri işle
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            # Tüm sembolleri paralel olarak analiz et
-            future_to_symbol = {executor.submit(analyze_symbol, symbol): symbol for symbol in symbols}
+        if scan_results:
+            # Tarama süresini hesapla
+            scan_time = time.time() - start_time
+            scan_time_minutes = int(scan_time // 60)
+            scan_time_seconds = int(scan_time % 60)
             
-            # Sonuçları topla
-            for future in concurrent.futures.as_completed(future_to_symbol):
-                symbol = future_to_symbol[future]
-                try:
-                    result = future.result()
-                    if result:
-                        firsatlar.append(result)
-                        print(f"✅ {symbol} analiz edildi - {len(firsatlar)} fırsat bulundu")
-                except Exception as e:
-                    print(f"❌ {symbol} analiz hatası: {e}")
-                    continue
-        
-        def analyze_symbol(symbol, interval='4h'):
-            try:
-                current_price = get_current_price(symbol)
-                if not current_price:
-                    return None
-                
-                df = fetch_ohlcv(symbol, interval)
-                if df is None or df.empty:
-                    return None
-                
-                # MA hesaplamaları
-                df['MA7'] = df['close'].rolling(window=7).mean()
-                df['MA25'] = df['close'].rolling(window=25).mean()
-                df['MA50'] = df['close'].rolling(window=50).mean()
-                df['MA99'] = df['close'].rolling(window=99).mean()
-                
-                ma_trend = None
-                if df['MA7'].iloc[-1] > df['MA25'].iloc[-1] > df['MA50'].iloc[-1] > df['MA99'].iloc[-1]:
-                    ma_trend = 'Güçlü Yükseliş'
-                elif df['MA7'].iloc[-1] < df['MA25'].iloc[-1] < df['MA50'].iloc[-1] < df['MA99'].iloc[-1]:
-                    ma_trend = 'Güçlü Düşüş'
-                else:
-                    ma_trend = 'Kararsız'
-                
-                fibo_levels, fibo_high, fibo_low = calculate_fibonacci_levels(df)
-                
-                # Tüm formasyonları analiz et
-                all_tobo = find_all_tobo(df)
-                all_obo = find_all_obo(df)
-                falling_wedge = detect_falling_wedge(df)
-                rectangle = find_rectangle(df)
-                ascending_triangle = find_ascending_triangle(df)
-                descending_triangle = find_descending_triangle(df)
+            # Sonuçları formatla
+            return {
+                "total_scanned": scan_results.get("total_scanned", 0),
+                "opportunities": scan_results.get("opportunities", []),
+                "scan_time": f"{scan_time_minutes} dakika {scan_time_seconds} saniye"
+            }
+        else:
+            print("❌ botanlik.py'den sonuç alınamadı")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Tarama hatası: {e}")
+        print(f"🔍 Detaylı hata: {traceback.format_exc()}")
+        return None
                 symmetrical_triangle = find_symmetrical_triangle(df)
                 broadening = find_broadening_formation(df)
                 
@@ -942,8 +886,8 @@ def send_scan_results_to_user(user_id, results):
         tp_str = format_price_display(tp)
         sl_str = format_price_display(sl)
         
-        # Risk analizi - botanlik2.py'den gelen veriyi doğru kullan
-        leverage = risk_analysis.get('leverage', '5x')
+        # Risk analizi - Sabit 5x kaldıraç
+        leverage = '5x'  # Sabit 5x kaldıraç
         position_size = risk_analysis.get('position_size', 'Kasanın %5\'i')
         potential_gain = risk_analysis.get('potential_gain', '%0.0')
         risk_amount = risk_analysis.get('risk_amount', '%0.0')
