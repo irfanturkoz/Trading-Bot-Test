@@ -716,14 +716,14 @@ def admin_panel():
     
     # Ortalama lisans değeri
     avg_license_value = round(total_revenue / len(licenses) if licenses else 0, 2)
-     
-     # Son 5 lisans
-     recent_licenses = dict(list(licenses.items())[-5:])
-     
-     # Broadcast geçmişi (son 10)
-     broadcast_history = load_broadcast_history()[-10:]
-     
-     stats = {
+    
+    # Son 5 lisans
+    recent_licenses = dict(list(licenses.items())[-5:])
+    
+    # Broadcast geçmişi (son 10)
+    broadcast_history = load_broadcast_history()[-10:]
+    
+    stats = {
         'total_licenses': len(licenses),
         'active_licenses': len(active_licenses),
         'unlimited_licenses': len([l for l in licenses.values() if l.get('type') == 'unlimited']),
