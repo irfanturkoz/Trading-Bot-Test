@@ -500,16 +500,30 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
                             'rr': rr
                         })
             
-            # En iyi R/R oranını seç (1.5-1.8 arası tercih et)
+            # Dengeli R/R oranı seç (1.2-1.8 arası çeşitli dağılım)
             if all_options:
-                # Önce 1.5-1.8 arası ara (en iyi aralık)
-                preferred_options = [opt for opt in all_options if 1.5 <= opt['rr'] <= 1.8]
-                if preferred_options:
-                    # Tercih edilen aralıktan en yüksek R/R'yi seç
-                    best_option = max(preferred_options, key=lambda x: x['rr'])
-                else:
-                    # Tercih edilen aralık yoksa en yüksek R/R'yi seç
-                    best_option = max(all_options, key=lambda x: x['rr'])
+                # R/R oranlarına göre ağırlıklandırma
+                weighted_options = []
+                for opt in all_options:
+                    rr = opt['rr']
+                    # 1.2-1.4 arası: %40 ağırlık
+                    if 1.2 <= rr <= 1.4:
+                        weight = 0.4
+                    # 1.4-1.6 arası: %35 ağırlık  
+                    elif 1.4 < rr <= 1.6:
+                        weight = 0.35
+                    # 1.6-1.8 arası: %25 ağırlık
+                    elif 1.6 < rr <= 1.8:
+                        weight = 0.25
+                    else:
+                        weight = 0.0
+                    
+                    weighted_options.append((opt, weight))
+                
+                # Ağırlıklı rastgele seçim
+                import random
+                options, weights = zip(*weighted_options)
+                best_option = random.choices(options, weights=weights, k=1)[0]
                 return best_option['tp'], best_option['sl'], best_option['rr']
             
             return current_tp, current_sl, current_rr
@@ -565,16 +579,30 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
                             'rr': rr
                         })
             
-            # En iyi R/R oranını seç (1.5-1.8 arası tercih et)
+            # Dengeli R/R oranı seç (1.2-1.8 arası çeşitli dağılım)
             if all_options:
-                # Önce 1.5-1.8 arası ara (en iyi aralık)
-                preferred_options = [opt for opt in all_options if 1.5 <= opt['rr'] <= 1.8]
-                if preferred_options:
-                    # Tercih edilen aralıktan en yüksek R/R'yi seç
-                    best_option = max(preferred_options, key=lambda x: x['rr'])
-                else:
-                    # Tercih edilen aralık yoksa en yüksek R/R'yi seç
-                    best_option = max(all_options, key=lambda x: x['rr'])
+                # R/R oranlarına göre ağırlıklandırma
+                weighted_options = []
+                for opt in all_options:
+                    rr = opt['rr']
+                    # 1.2-1.4 arası: %40 ağırlık
+                    if 1.2 <= rr <= 1.4:
+                        weight = 0.4
+                    # 1.4-1.6 arası: %35 ağırlık  
+                    elif 1.4 < rr <= 1.6:
+                        weight = 0.35
+                    # 1.6-1.8 arası: %25 ağırlık
+                    elif 1.6 < rr <= 1.8:
+                        weight = 0.25
+                    else:
+                        weight = 0.0
+                    
+                    weighted_options.append((opt, weight))
+                
+                # Ağırlıklı rastgele seçim
+                import random
+                options, weights = zip(*weighted_options)
+                best_option = random.choices(options, weights=weights, k=1)[0]
                 return best_option['tp'], best_option['sl'], best_option['rr']
             
             return current_tp, current_sl, current_rr
