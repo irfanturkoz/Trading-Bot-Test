@@ -486,8 +486,9 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
             best_tp = current_tp
             best_sl = current_sl
             best_rr = current_rr
+            all_options = []
             
-            # En iyi kombinasyonu bul
+            # Tüm kombinasyonları topla
             for tp_level, tp_price in tp_options:
                 for sl_level, sl_price in sl_options:
                     # Minimum SL mesafesi kontrolü (%2'den az olmasın)
@@ -499,11 +500,32 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
                     risk = (entry_price - sl_price) / entry_price
                     rr = reward / risk if risk > 0 else 0
                     
-                    # R/R 1.0-2.5 arası olsun (daha gerçekçi)
-                    if 1.0 <= rr <= 2.5 and rr > best_rr:
-                        best_tp = tp_price
-                        best_sl = sl_price
-                        best_rr = rr
+                    # R/R 1.0-2.5 arası olsun
+                    if 1.0 <= rr <= 2.5:
+                        all_options.append({
+                            'tp': tp_price,
+                            'sl': sl_price,
+                            'rr': rr,
+                            'tp_level': tp_level,
+                            'sl_level': sl_level
+                        })
+            
+            # En iyi seçeneği bul (1.5-2.0 arası tercih et)
+            if all_options:
+                # Önce 1.5-2.0 arası ara
+                preferred_options = [opt for opt in all_options if 1.5 <= opt['rr'] <= 2.0]
+                if preferred_options:
+                    # Tercih edilen aralıktan rastgele seç
+                    import random
+                    best_option = random.choice(preferred_options)
+                else:
+                    # Tercih edilen aralık yoksa en yakın olanı seç
+                    target_rr = 1.75  # Hedef R/R
+                    best_option = min(all_options, key=lambda x: abs(x['rr'] - target_rr))
+                
+                best_tp = best_option['tp']
+                best_sl = best_option['sl']
+                best_rr = best_option['rr']
             
             return best_tp, best_sl, best_rr
         else:
@@ -545,8 +567,9 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
             best_tp = current_tp
             best_sl = current_sl
             best_rr = current_rr
+            all_options = []
             
-            # En iyi kombinasyonu bul
+            # Tüm kombinasyonları topla
             for tp_level, tp_price in tp_options:
                 for sl_level, sl_price in sl_options:
                     # Minimum SL mesafesi kontrolü (%2'den az olmasın)
@@ -558,11 +581,32 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
                     risk = (sl_price - entry_price) / entry_price
                     rr = reward / risk if risk > 0 else 0
                     
-                    # R/R 1.0-2.5 arası olsun (daha gerçekçi)
-                    if 1.0 <= rr <= 2.5 and rr > best_rr:
-                        best_tp = tp_price
-                        best_sl = sl_price
-                        best_rr = rr
+                    # R/R 1.0-2.5 arası olsun
+                    if 1.0 <= rr <= 2.5:
+                        all_options.append({
+                            'tp': tp_price,
+                            'sl': sl_price,
+                            'rr': rr,
+                            'tp_level': tp_level,
+                            'sl_level': sl_level
+                        })
+            
+            # En iyi seçeneği bul (1.5-2.0 arası tercih et)
+            if all_options:
+                # Önce 1.5-2.0 arası ara
+                preferred_options = [opt for opt in all_options if 1.5 <= opt['rr'] <= 2.0]
+                if preferred_options:
+                    # Tercih edilen aralıktan rastgele seç
+                    import random
+                    best_option = random.choice(preferred_options)
+                else:
+                    # Tercih edilen aralık yoksa en yakın olanı seç
+                    target_rr = 1.75  # Hedef R/R
+                    best_option = min(all_options, key=lambda x: abs(x['rr'] - target_rr))
+                
+                best_tp = best_option['tp']
+                best_sl = best_option['sl']
+                best_rr = best_option['rr']
             
             return best_tp, best_sl, best_rr
         else:
