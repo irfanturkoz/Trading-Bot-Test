@@ -2374,6 +2374,138 @@ def get_scan_results():
         # Tüm coinleri gerçekten analiz et - 80-90 saniye sürecek
         print(f"🔍 {len(symbols)} coin analiz ediliyor... (80-90 saniye sürecek)")
         
+        # analyze_symbol fonksiyonunu main() fonksiyonundan al
+        def analyze_symbol(symbol, interval='4h'):
+            try:
+                current_price = get_current_price(symbol)
+                if not current_price:
+                    return None
+                
+                df = fetch_ohlcv(symbol, interval)
+                if df is None or df.empty or len(df) < 100:
+                    return None
+                
+                # MA hesaplamaları
+                df['MA7'] = df['close'].rolling(window=7).mean()
+                df['MA25'] = df['close'].rolling(window=25).mean()
+                df['MA50'] = df['close'].rolling(window=50).mean()
+                df['MA99'] = df['close'].rolling(window=99).mean()
+                
+                ma_trend = None
+                if df['MA7'].iloc[-1] > df['MA25'].iloc[-1] > df['MA50'].iloc[-1] > df['MA99'].iloc[-1]:
+                    ma_trend = 'Güçlü Yükseliş'
+                elif df['MA7'].iloc[-1] < df['MA25'].iloc[-1] < df['MA50'].iloc[-1] < df['MA99'].iloc[-1]:
+                    ma_trend = 'Güçlü Düşüş'
+                else:
+                    ma_trend = 'Kararsız'
+                
+                fibo_levels, fibo_high, fibo_low = calculate_fibonacci_levels(df)
+                
+                # Tüm formasyonları analiz et
+                all_tobo = find_all_tobo(df)
+                all_obo = find_all_obo(df)
+                falling_wedge = detect_falling_wedge(df)
+                
+                # En güçlü formasyonu belirle
+                formations = []
+                
+                if all_tobo:
+                    tobo = all_tobo[-1]
+                    entry = current_price
+                    tp = fibo_levels.get('0.382', current_price * 1.05)
+                    sl = tobo['neckline']
+                    
+                    # TP/SL optimizasyonu
+                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, None)
+                    
+                    # R/R oranı kontrolü - Daha esnek kriterler
+                    if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
+                        risk_analysis = calculate_optimal_risk(symbol, entry, optimized_tp, optimized_sl, 'Long')
+                        
+                        formations.append({
+                            'type': 'TOBO',
+                            'data': tobo,
+                            'direction': 'Long',
+                            'tp': optimized_tp,
+                            'sl': optimized_sl,
+                            'rr_ratio': optimized_rr,
+                            'risk_analysis': risk_analysis
+                        })
+                
+                if all_obo:
+                    obo = all_obo[-1]
+                    entry = current_price
+                    tp = fibo_levels.get('0.618', current_price * 0.95)
+                    sl = obo['neckline']
+                    
+                    # TP/SL optimizasyonu
+                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Short', fibo_levels, None)
+                    
+                    # R/R oranı kontrolü
+                    if optimized_rr >= 0.5:
+                        risk_analysis = calculate_optimal_risk(symbol, entry, optimized_tp, optimized_sl, 'Short')
+                        
+                        formations.append({
+                            'type': 'OBO',
+                            'data': obo,
+                            'direction': 'Short',
+                            'tp': optimized_tp,
+                            'sl': optimized_sl,
+                            'rr_ratio': optimized_rr,
+                            'risk_analysis': risk_analysis
+                        })
+                
+                if falling_wedge:
+                    entry = current_price
+                    tp = falling_wedge.get('tp', current_price * 1.05)
+                    sl = falling_wedge.get('sl', current_price * 0.95)
+                    
+                    # TP/SL optimizasyonu
+                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, None)
+                    
+                    # R/R oranı kontrolü
+                    if optimized_rr >= 0.5:
+                        risk_analysis = calculate_optimal_risk(symbol, entry, optimized_tp, optimized_sl, 'Long')
+                        
+                        formations.append({
+                            'type': 'Falling Wedge',
+                            'data': falling_wedge,
+                            'direction': 'Long',
+                            'tp': optimized_tp,
+                            'sl': optimized_sl,
+                            'rr_ratio': optimized_rr,
+                            'risk_analysis': risk_analysis
+                        })
+                
+                # En iyi formasyonu seç
+                if not formations:
+                    return None
+                
+                # R/R oranına göre sırala
+                best_formation = max(formations, key=lambda x: x['rr_ratio'])
+                
+                # Sinyal gücü hesapla
+                signal_strength = 70  # Varsayılan
+                if 'Güçlü Yükseliş' in ma_trend and best_formation['direction'] == 'Long':
+                    signal_strength += 10
+                
+                return {
+                    'symbol': symbol,
+                    'yön': best_formation['direction'],
+                    'formasyon': best_formation['type'],
+                    'price': current_price,
+                    'tp': best_formation['tp'],
+                    'sl': best_formation['sl'],
+                    'tpfark': abs(best_formation['tp'] - current_price) / current_price,
+                    'risk_analysis': best_formation['risk_analysis'],
+                    'signal_strength': min(95, signal_strength),
+                    'rr_ratio': best_formation['rr_ratio']
+                }
+                
+            except Exception as e:
+                print(f"Hata {symbol}: {e}")
+                return None
+        
         # Thread sayısını azalt - daha detaylı analiz için
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [executor.submit(analyze_symbol, symbol, '4h') for symbol in symbols]
