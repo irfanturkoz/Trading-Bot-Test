@@ -451,6 +451,128 @@ def calculate_three_tp_levels(entry_price, current_tp, current_sl, direction, fi
     }
 
 
+def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
+    """
+    Düzeltilmiş TP ve SL optimizasyonu - Gerçekçi R/R oranları (1.2-1.8 arası)
+    """
+    if direction == 'Long':
+        # Mantık kontrolü
+        if entry_price <= current_sl or current_tp <= entry_price:
+            return entry_price, entry_price * 0.99, 0
+        
+        # Mevcut R/R hesapla
+        current_reward = (current_tp - entry_price) / entry_price
+        current_risk = (entry_price - current_sl) / entry_price
+        current_rr = current_reward / current_risk if current_risk > 0 else 0
+        
+        # R/R < 1.2 ise optimize et
+        if current_rr < 1.2:
+            # Daha yakın Fibonacci seviyeleri
+            tp_options = []
+            for level in ['0.236', '0.382', '0.5']:
+                if level in fibo_levels and fibo_levels[level] > entry_price:
+                    tp_options.append(fibo_levels[level])
+            
+            sl_options = []
+            for level in ['0.5', '0.618']:
+                if level in fibo_levels and fibo_levels[level] < entry_price:
+                    sl_options.append(fibo_levels[level])
+            
+            if bb_data and bb_data['lower_band'] < entry_price:
+                sl_options.append(bb_data['lower_band'])
+            
+            # Tüm kombinasyonları topla
+            all_options = []
+            for tp in tp_options:
+                for sl in sl_options:
+                    if sl >= entry_price:
+                        continue
+                    
+                    reward = (tp - entry_price) / entry_price
+                    risk = (entry_price - sl) / entry_price
+                    rr = reward / risk if risk > 0 else 0
+                    
+                    # 1.2-1.8 arası
+                    if 1.2 <= rr <= 1.8:
+                        all_options.append({
+                            'tp': tp,
+                            'sl': sl,
+                            'rr': rr
+                        })
+            
+            # Rastgele seçim yap
+            if all_options:
+                import random
+                best_option = random.choice(all_options)
+                return best_option['tp'], best_option['sl'], best_option['rr']
+            
+            return current_tp, current_sl, current_rr
+        else:
+            # Mevcut R/R'yi kontrol et
+            if current_rr > 1.8:
+                new_tp = entry_price + (entry_price - current_sl) * 1.8
+                return new_tp, current_sl, 1.8
+            return current_tp, current_sl, current_rr
+    
+    else:  # Short
+        # Mantık kontrolü
+        if entry_price >= current_sl or current_tp >= entry_price:
+            return entry_price, entry_price * 1.01, 0
+        
+        # Mevcut R/R hesapla
+        current_reward = (entry_price - current_tp) / entry_price
+        current_risk = (current_sl - entry_price) / entry_price
+        current_rr = current_reward / current_risk if current_risk > 0 else 0
+        
+        # R/R < 1.2 ise optimize et
+        if current_rr < 1.2:
+            # Daha yakın Fibonacci seviyeleri
+            tp_options = []
+            for level in ['0.5', '0.382', '0.236']:
+                if level in fibo_levels and fibo_levels[level] < entry_price:
+                    tp_options.append(fibo_levels[level])
+            
+            sl_options = []
+            for level in ['0.618', '0.5']:
+                if level in fibo_levels and fibo_levels[level] > entry_price:
+                    sl_options.append(fibo_levels[level])
+            
+            if bb_data and bb_data['upper_band'] > entry_price:
+                sl_options.append(bb_data['upper_band'])
+            
+            # Tüm kombinasyonları topla
+            all_options = []
+            for tp in tp_options:
+                for sl in sl_options:
+                    if sl <= entry_price:
+                        continue
+                    
+                    reward = (entry_price - tp) / entry_price
+                    risk = (sl - entry_price) / entry_price
+                    rr = reward / risk if risk > 0 else 0
+                    
+                    # 1.2-1.8 arası
+                    if 1.2 <= rr <= 1.8:
+                        all_options.append({
+                            'tp': tp,
+                            'sl': sl,
+                            'rr': rr
+                        })
+            
+            # Rastgele seçim yap
+            if all_options:
+                import random
+                best_option = random.choice(all_options)
+                return best_option['tp'], best_option['sl'], best_option['rr']
+            
+            return current_tp, current_sl, current_rr
+        else:
+            # Mevcut R/R'yi kontrol et
+            if current_rr > 1.8:
+                new_tp = entry_price - (current_sl - entry_price) * 1.8
+                return new_tp, current_sl, 1.8
+            return current_tp, current_sl, current_rr
+
 def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
     """
     TP ve SL seviyelerini optimize eder - Gerçekçi R/R oranları (1.2-1.8 arası)
@@ -2494,8 +2616,8 @@ def get_scan_results():
                     tp = fibo_levels.get('0.618', current_price * 0.95)
                     sl = obo['neckline']
                     
-                    # TP/SL optimizasyonu
-                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Short', fibo_levels, None)
+                    # TP/SL optimizasyonu - Düzeltilmiş R/R
+                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Short', fibo_levels, None)
                     
                     # R/R oranı kontrolü
                     if optimized_rr >= 0.5:

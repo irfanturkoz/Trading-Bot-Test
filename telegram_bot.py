@@ -213,12 +213,13 @@ def start_scan_async(message):
         scan_results = perform_scan()
         print(f"📊 Tarama sonucu: {scan_results}")
         
-        if scan_results and len(scan_results) > 0:
-            print(f"✅ {len(scan_results)} fırsat bulundu")
+        if scan_results and scan_results.get('opportunities'):
+            opportunities = scan_results['opportunities']
+            print(f"✅ {len(opportunities)} fırsat bulundu")
             send_scan_results_to_user(user_id, scan_results)
             # Son tarama zamanını kaydet
             save_last_scan_time(user_id)
-            bot.send_message(user_id, "✅ **Tarama tamamlandı!**\n\n⏰ **Sonraki tarama: 3 saat sonra**", parse_mode='Markdown')
+            bot.send_message(user_id, f"✅ **Tarama tamamlandı!**\n\n📊 **{len(opportunities)} fırsat bulundu**\n⏰ **Sonraki tarama: 3 saat sonra**", parse_mode='Markdown')
         else:
             print("❌ Tarama sonucu boş")
             bot.send_message(user_id, "❌ **Tarama başarısız oldu. Lütfen tekrar deneyin.**", parse_mode='Markdown')
@@ -705,14 +706,21 @@ def perform_scan():
             print(f"🔍 Traceback: {traceback.format_exc()}")
             return None
         
+        print("🚀 get_scan_results() fonksiyonu çağrılıyor...")
+        
         # botanlik.py'nin get_scan_results fonksiyonunu çağır
         scan_results = get_scan_results()
+        
+        print(f"📊 get_scan_results() sonucu: {scan_results}")
         
         if scan_results:
             # Tarama süresini hesapla
             scan_time = time.time() - start_time
             scan_time_minutes = int(scan_time // 60)
             scan_time_seconds = int(scan_time % 60)
+            
+            print(f"⏱️ Tarama süresi: {scan_time_minutes} dakika {scan_time_seconds} saniye")
+            print(f"📈 Bulunan fırsat sayısı: {len(scan_results.get('opportunities', []))}")
             
             # Sonuçları formatla
             return {
