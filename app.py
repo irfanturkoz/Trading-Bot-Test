@@ -124,10 +124,20 @@ ADMIN_TEMPLATE = """
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        .form-group select:focus, .form-group input:focus {
-            outline: none;
-            border-color: #1f77b4;
-        }
+                 .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
+             outline: none;
+             border-color: #1f77b4;
+         }
+         .form-group textarea {
+             width: 100%;
+             padding: 12px;
+             border: 2px solid #ddd;
+             border-radius: 8px;
+             font-size: 16px;
+             font-family: inherit;
+             resize: vertical;
+             min-height: 120px;
+         }
         .btn {
             background: linear-gradient(135deg, #1f77b4 0%, #2c3e50 100%);
             color: white;
@@ -451,33 +461,86 @@ ADMIN_TEMPLATE = """
                 </div>
             </div>
             
-            <div id="settings" class="tab-content">
-                <div class="section">
-                    <h2>🔐 Güvenlik Ayarları</h2>
-                    <form method="POST" action="/admin/change_password">
-                        <div class="form-group">
-                            <label for="current_password">Mevcut Şifre:</label>
-                            <input type="password" id="current_password" name="current_password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="new_password">Yeni Şifre:</label>
-                            <input type="password" id="new_password" name="new_password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="confirm_password">Şifre Tekrar:</label>
-                            <input type="password" id="confirm_password" name="confirm_password" required>
-                        </div>
-                        <button type="submit" class="btn">🔒 Şifre Değiştir</button>
-                    </form>
-                </div>
-                
-                <div class="section">
-                    <h2>🚪 Çıkış</h2>
-                    <form method="POST" action="/admin/logout">
-                        <button type="submit" class="btn btn-danger">🚪 Çıkış Yap</button>
-                    </form>
-                </div>
-            </div>
+                         <div id="settings" class="tab-content">
+                 <div class="section">
+                     <h2>📢 Toplu Bildirim Gönder</h2>
+                     <form method="POST" action="/admin/send_broadcast">
+                         <div class="form-group">
+                             <label for="broadcast_title">Başlık:</label>
+                             <input type="text" id="broadcast_title" name="broadcast_title" placeholder="Örnek: Önemli Güncelleme" required>
+                         </div>
+                         <div class="form-group">
+                             <label for="broadcast_message">Mesaj:</label>
+                             <textarea id="broadcast_message" name="broadcast_message" rows="6" placeholder="Tüm kullanıcılara gönderilecek mesajı yazın..." required></textarea>
+                         </div>
+                         <div class="form-group">
+                             <label for="broadcast_type">Bildirim Tipi:</label>
+                             <select id="broadcast_type" name="broadcast_type" required>
+                                 <option value="info">ℹ️ Bilgi</option>
+                                 <option value="warning">⚠️ Uyarı</option>
+                                 <option value="success">✅ Başarı</option>
+                                 <option value="error">❌ Hata</option>
+                                 <option value="update">🔄 Güncelleme</option>
+                             </select>
+                         </div>
+                         <button type="submit" class="btn btn-success" onclick="return confirm('Bu mesaj tüm aktif kullanıcılara gönderilecek. Emin misiniz?')">📢 Toplu Bildirim Gönder</button>
+                     </form>
+                 </div>
+                 
+                 <div class="section">
+                     <h2>📋 Bildirim Geçmişi</h2>
+                     <div class="license-list">
+                         {% for broadcast in broadcast_history %}
+                         <div class="license-item">
+                             <div class="license-info">
+                                 <h4>{{ broadcast.title }}</h4>
+                                 <p>
+                                     <strong>Tip:</strong> 
+                                     {% if broadcast.type == 'info' %}ℹ️ Bilgi
+                                     {% elif broadcast.type == 'warning' %}⚠️ Uyarı
+                                     {% elif broadcast.type == 'success' %}✅ Başarı
+                                     {% elif broadcast.type == 'error' %}❌ Hata
+                                     {% elif broadcast.type == 'update' %}🔄 Güncelleme
+                                     {% else %}{{ broadcast.type }}{% endif %} |
+                                     <strong>Gönderilen:</strong> {{ broadcast.sent_count }} kullanıcı |
+                                     <strong>Başarısız:</strong> {{ broadcast.failed_count }} |
+                                     <strong>Tarih:</strong> {{ broadcast.timestamp }}
+                                 </p>
+                                 <p style="margin-top: 10px; font-style: italic; color: #666;">
+                                     {{ broadcast.message[:100] }}{% if broadcast.message|length > 100 %}...{% endif %}
+                                 </p>
+                             </div>
+                         </div>
+                         {% endfor %}
+                     </div>
+                 </div>
+                 
+                 <div class="section">
+                     <h2>🔐 Güvenlik Ayarları</h2>
+                     <form method="POST" action="/admin/change_password">
+                         <div class="form-group">
+                             <label for="current_password">Mevcut Şifre:</label>
+                             <input type="password" id="current_password" name="current_password" required>
+                         </div>
+                         <div class="form-group">
+                             <label for="new_password">Yeni Şifre:</label>
+                             <input type="password" id="new_password" name="new_password" required>
+                         </div>
+                         <div class="form-group">
+                             <label for="confirm_password">Şifre Tekrar:</label>
+                             <input type="password" id="confirm_password" name="confirm_password" required>
+                         </div>
+                         <button type="submit" class="btn">🔒 Şifre Değiştir</button>
+                     </form>
+                 </div>
+                 
+                 <div class="section">
+                     <h2>🚪 Çıkış</h2>
+                     <form method="POST" action="/admin/logout">
+                         <button type="submit" class="btn btn-danger">🚪 Çıkış Yap</button>
+                     </form>
+                 </div>
+             </div>
         </div>
     </div>
     
@@ -527,6 +590,19 @@ def save_licenses(licenses):
     """Lisansları kaydet"""
     with open('licenses.json', 'w', encoding='utf-8') as f:
         json.dump(licenses, f, indent=2, ensure_ascii=False)
+
+def load_broadcast_history():
+    """Broadcast geçmişini yükle"""
+    try:
+        with open('broadcast_history.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_broadcast_history(history):
+    """Broadcast geçmişini kaydet"""
+    with open('broadcast_history.json', 'w', encoding='utf-8') as f:
+        json.dump(history, f, indent=2, ensure_ascii=False)
 
 def generate_hash_like_key():
     """Hash-like lisans anahtarı oluştur"""
@@ -640,11 +716,14 @@ def admin_panel():
     
     # Ortalama lisans değeri
     avg_license_value = round(total_revenue / len(licenses) if licenses else 0, 2)
-    
-    # Son 5 lisans
-    recent_licenses = dict(list(licenses.items())[-5:])
-    
-    stats = {
+     
+     # Son 5 lisans
+     recent_licenses = dict(list(licenses.items())[-5:])
+     
+     # Broadcast geçmişi (son 10)
+     broadcast_history = load_broadcast_history()[-10:]
+     
+     stats = {
         'total_licenses': len(licenses),
         'active_licenses': len(active_licenses),
         'unlimited_licenses': len([l for l in licenses.values() if l.get('type') == 'unlimited']),
@@ -664,6 +743,7 @@ def admin_panel():
         logged_in=True, 
         licenses=licenses, 
         recent_licenses=recent_licenses,
+        broadcast_history=broadcast_history,
         stats=stats,
         message=session.pop('message', None),
         error=session.pop('error', None)
@@ -942,6 +1022,99 @@ def refresh_licenses():
     except Exception as e:
         print(f"Lisans yenileme hatası: {e}")
         session['message'] = '🔄 Lisanslar yenilendi!'
+    
+    return redirect('/admin')
+
+@app.route('/admin/send_broadcast', methods=['POST'])
+def send_broadcast():
+    if 'logged_in' not in session:
+        return redirect('/admin')
+    
+    broadcast_title = request.form.get('broadcast_title')
+    broadcast_message = request.form.get('broadcast_message')
+    broadcast_type = request.form.get('broadcast_type')
+    
+    if not broadcast_title or not broadcast_message:
+        session['error'] = '❌ Başlık ve mesaj alanları zorunludur!'
+        return redirect('/admin')
+    
+    try:
+        # Bot'a broadcast gönderme isteği
+        import telegram_bot
+        if hasattr(telegram_bot, 'bot') and telegram_bot.bot:
+            # Tüm aktif kullanıcıları bul
+            storage_dir = "/tmp/persistent_storage"
+            if os.path.exists(storage_dir):
+                sent_count = 0
+                failed_count = 0
+                
+                for filename in os.listdir(storage_dir):
+                    if filename.startswith("user_") and filename.endswith(".json"):
+                        try:
+                            with open(f"{storage_dir}/{filename}", 'r') as f:
+                                user_license = json.load(f)
+                            
+                            # Kullanıcının lisansının geçerli olup olmadığını kontrol et
+                            license_key = user_license.get('license_key')
+                            if license_key:
+                                licenses = load_licenses()
+                                if license_key in licenses and licenses[license_key].get('active', True):
+                                    user_id = filename.replace("user_", "").replace(".json", "")
+                                    
+                                    # Bildirim tipine göre emoji seç
+                                    type_emoji = {
+                                        'info': 'ℹ️',
+                                        'warning': '⚠️',
+                                        'success': '✅',
+                                        'error': '❌',
+                                        'update': '🔄'
+                                    }.get(broadcast_type, '📢')
+                                    
+                                    # Mesajı formatla
+                                    formatted_message = f"""
+{type_emoji} **{broadcast_title}**
+
+{broadcast_message}
+
+---
+📅 **Gönderilme:** {time.strftime("%d.%m.%Y %H:%M")}
+👤 **Gönderen:** Admin Panel
+"""
+                                    
+                                    # Mesajı gönder
+                                    telegram_bot.bot.send_message(user_id, formatted_message, parse_mode='Markdown')
+                                    sent_count += 1
+                                    print(f"✅ Bildirim gönderildi: {user_id}")
+                                    
+                                    # Rate limiting - Telegram API limitlerini aşmamak için
+                                    time.sleep(0.1)
+                        except Exception as e:
+                            failed_count += 1
+                            print(f"❌ Bildirim gönderilemedi: {filename} - {e}")
+                
+                if sent_count > 0:
+                    # Broadcast geçmişini kaydet
+                    history = load_broadcast_history()
+                    history.append({
+                        'title': broadcast_title,
+                        'message': broadcast_message,
+                        'type': broadcast_type,
+                        'sent_count': sent_count,
+                        'failed_count': failed_count,
+                        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                    save_broadcast_history(history)
+                    
+                    session['message'] = f'📢 Toplu bildirim gönderildi! ✅ {sent_count} kullanıcıya ulaştı, ❌ {failed_count} başarısız'
+                else:
+                    session['error'] = f'❌ Hiçbir kullanıcıya bildirim gönderilemedi! ❌ {failed_count} başarısız'
+            else:
+                session['error'] = '❌ Aktif kullanıcı bulunamadı!'
+        else:
+            session['error'] = '❌ Bot bağlantısı kurulamadı!'
+    except Exception as e:
+        print(f"Broadcast hatası: {e}")
+        session['error'] = f'❌ Bildirim gönderme hatası: {e}'
     
     return redirect('/admin')
 
