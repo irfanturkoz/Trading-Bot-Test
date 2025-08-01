@@ -577,9 +577,9 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
     # Formasyon çarpanı uygula
     dynamic_rr_max *= formation_multiplier
     
-    # Maksimum sınırları
-    dynamic_rr_min = max(1.1, min(dynamic_rr_min, 1.8))
-    dynamic_rr_max = max(dynamic_rr_min + 0.3, min(dynamic_rr_max, 3.5))
+    # Maksimum sınırları - Daha konservatif ve gerçekçi
+    dynamic_rr_min = max(1.1, min(dynamic_rr_min, 1.6))  # Min: 1.1-1.6 arası
+    dynamic_rr_max = max(dynamic_rr_min + 0.3, min(dynamic_rr_max, 2.2))  # Max: 2.2 (çok daha gerçekçi)
     
     print(f" Dinamik R/R Analizi:")
     print(f"   Volatilite: {volatility:.3f} | Trend: {trend_strength:.2f} | Momentum: {momentum:.2f}")
@@ -1926,7 +1926,7 @@ def main():
                             short_percentage = (bearish_signals / total_signals) * 100
                             
                             if short_percentage >= 40:
-                                optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Short', fibo_levels, bb_data)
+                                optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Short', fibo_levels, bb_data, df, 'OBO')
                                 
                                 # 0.8:1 R/R kontrolü
                                 if 0.8 <= optimized_rr < 1.0:
