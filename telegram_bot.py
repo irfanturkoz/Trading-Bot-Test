@@ -440,12 +440,33 @@ def check_user_license(user_id):
             with open(license_file, 'r') as f:
                 user_license = json.load(f)
             
+            # Lisans anahtarını kontrol et
+            license_key = user_license.get('license_key')
+            if license_key:
+                # Lisans dosyasını yeniden yükle ve kontrol et
+                try:
+                    with open('licenses.json', 'r', encoding='utf-8') as f:
+                        licenses = json.load(f)
+                    
+                    # Lisans hala mevcut ve aktif mi?
+                    if license_key not in licenses or not licenses[license_key].get('active', True):
+                        # Lisans silinmiş veya pasif yapılmış
+                        print(f"❌ Lisans {license_key} silinmiş veya pasif: {user_id}")
+                        # Kullanıcı dosyasını sil
+                        os.remove(license_file)
+                        return None
+                except Exception as e:
+                    print(f"Lisans dosyası kontrol hatası: {e}")
+            
             # Lisans süresini kontrol et
             expiry_date = user_license.get('expiry_date')
             if expiry_date:
                 expiry = datetime.fromisoformat(expiry_date)
                 if datetime.now() > expiry:
-                    return None  # Süresi dolmuş
+                    print(f"❌ Lisans süresi dolmuş: {user_id}")
+                    # Kullanıcı dosyasını sil
+                    os.remove(license_file)
+                    return None
             
             return user_license
         

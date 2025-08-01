@@ -313,6 +313,12 @@ ADMIN_TEMPLATE = """
                 <div class="tab" onclick="showTab('settings')">⚙️ Ayarlar</div>
             </div>
             
+            <div style="text-align: right; margin-bottom: 20px;">
+                <form method="POST" action="/admin/refresh_licenses" style="display: inline;">
+                    <button type="submit" class="btn btn-success">🔄 Lisansları Yenile</button>
+                </form>
+            </div>
+            
             <div id="overview" class="tab-content active">
                 <div class="section">
                     <h2>🔑 Hızlı Lisans Oluştur</h2>
@@ -738,11 +744,61 @@ def toggle_license():
     licenses = load_licenses()
     
     if license_key in licenses:
-        licenses[license_key]['active'] = not licenses[license_key].get('active', True)
+        old_status = licenses[license_key].get('active', True)
+        licenses[license_key]['active'] = not old_status
         save_licenses(licenses)
         
-        status = "aktif" if licenses[license_key]['active'] else "pasif"
-        session['message'] = f'🔄 Lisans {license_key} {status} yapıldı'
+        new_status = licenses[license_key]['active']
+        status_text = "aktif" if new_status else "pasif"
+        
+        # Bot'a bildirim gönder (eğer bot çalışıyorsa)
+        try:
+            import telegram_bot
+            if hasattr(telegram_bot, 'bot') and telegram_bot.bot:
+                # Bu lisansı kullanan kullanıcıları bul ve uyar
+                storage_dir = "/tmp/persistent_storage"
+                if os.path.exists(storage_dir):
+                    for filename in os.listdir(storage_dir):
+                        if filename.startswith("user_") and filename.endswith(".json"):
+                            try:
+                                with open(f"{storage_dir}/{filename}", 'r') as f:
+                                    user_license = json.load(f)
+                                
+                                if user_license.get('license_key') == license_key:
+                                    user_id = filename.replace("user_", "").replace(".json", "")
+                                    
+                                    if not new_status:  # Pasif yapıldıysa
+                                        warning_message = f"""
+⚠️ **LİSANS PASİF YAPILDI!**
+
+🔑 **Lisans Anahtarı:** {license_key[:10]}...
+📦 **Paket:** {licenses[license_key].get('type', 'Bilinmiyor').upper()}
+
+❌ **Lisansınız admin tarafından pasif yapıldı!**
+
+💬 **Aktifleştirmek için:** @ApfelTradingAdmin ile iletişime geçin.
+
+🔄 **Bot kullanımı durduruldu...**
+"""
+                                        telegram_bot.bot.send_message(user_id, warning_message, parse_mode='Markdown')
+                                    else:  # Aktif yapıldıysa
+                                        success_message = f"""
+✅ **LİSANS AKTİF YAPILDI!**
+
+🔑 **Lisans Anahtarı:** {license_key[:10]}...
+📦 **Paket:** {licenses[license_key].get('type', 'Bilinmiyor').upper()}
+
+✅ **Lisansınız admin tarafından aktif yapıldı!**
+
+🚀 **Bot kullanıma hazır!**
+"""
+                                        telegram_bot.bot.send_message(user_id, success_message, parse_mode='Markdown')
+                            except Exception as e:
+                                print(f"Kullanıcı uyarısı gönderilemedi: {e}")
+        except Exception as e:
+            print(f"Bot bildirimi gönderilemedi: {e}")
+        
+        session['message'] = f'🔄 Lisans {license_key} {status_text} yapıldı ve kullanıcılar bilgilendirildi'
     else:
         session['error'] = '❌ Lisans bulunamadı!'
     
@@ -757,9 +813,51 @@ def delete_license():
     licenses = load_licenses()
     
     if license_key in licenses:
+        # Silinecek lisansı kaydet
+        deleted_license = licenses[license_key]
+        
+        # Lisansı sil
         del licenses[license_key]
         save_licenses(licenses)
-        session['message'] = f'🗑️ Lisans {license_key} silindi'
+        
+        # Bot'a bildirim gönder (eğer bot çalışıyorsa)
+        try:
+            import telegram_bot
+            if hasattr(telegram_bot, 'bot') and telegram_bot.bot:
+                # Bu lisansı kullanan kullanıcıları bul ve uyar
+                storage_dir = "/tmp/persistent_storage"
+                if os.path.exists(storage_dir):
+                    for filename in os.listdir(storage_dir):
+                        if filename.startswith("user_") and filename.endswith(".json"):
+                            try:
+                                with open(f"{storage_dir}/{filename}", 'r') as f:
+                                    user_license = json.load(f)
+                                
+                                if user_license.get('license_key') == license_key:
+                                    user_id = filename.replace("user_", "").replace(".json", "")
+                                    warning_message = f"""
+⚠️ **LİSANS İPTAL EDİLDİ!**
+
+🔑 **Lisans Anahtarı:** {license_key[:10]}...
+📦 **Paket:** {deleted_license.get('type', 'Bilinmiyor').upper()}
+
+❌ **Lisansınız admin tarafından iptal edildi!**
+
+💬 **Yeni lisans için:** @ApfelTradingAdmin ile iletişime geçin.
+
+🔄 **Bot yeniden başlatılıyor...**
+"""
+                                    telegram_bot.bot.send_message(user_id, warning_message, parse_mode='Markdown')
+                                    
+                                    # Kullanıcı dosyasını sil
+                                    os.remove(f"{storage_dir}/{filename}")
+                                    print(f"🗑️ Kullanıcı {user_id} dosyası silindi")
+                            except Exception as e:
+                                print(f"Kullanıcı uyarısı gönderilemedi: {e}")
+        except Exception as e:
+            print(f"Bot bildirimi gönderilemedi: {e}")
+        
+        session['message'] = f'🗑️ Lisans {license_key} silindi ve kullanıcılar uyarıldı'
     else:
         session['error'] = '❌ Lisans bulunamadı!'
     
@@ -789,6 +887,61 @@ def change_password():
     
     # Şifreyi güncelle (gerçek uygulamada güvenli şekilde saklayın!)
     session['message'] = '🔒 Şifre başarıyla değiştirildi! (Not: Bu demo için geçici)'
+    
+    return redirect('/admin')
+
+@app.route('/admin/refresh_licenses', methods=['POST'])
+def refresh_licenses():
+    if 'logged_in' not in session:
+        return redirect('/admin')
+    
+    try:
+        # Bot'a lisans yenileme bildirimi gönder
+        import telegram_bot
+        if hasattr(telegram_bot, 'bot') and telegram_bot.bot:
+            # Tüm kullanıcıları kontrol et ve güncelle
+            storage_dir = "/tmp/persistent_storage"
+            if os.path.exists(storage_dir):
+                updated_count = 0
+                for filename in os.listdir(storage_dir):
+                    if filename.startswith("user_") and filename.endswith(".json"):
+                        try:
+                            with open(f"{storage_dir}/{filename}", 'r') as f:
+                                user_license = json.load(f)
+                            
+                            license_key = user_license.get('license_key')
+                            if license_key:
+                                # Lisans dosyasını kontrol et
+                                licenses = load_licenses()
+                                if license_key not in licenses or not licenses[license_key].get('active', True):
+                                    # Lisans geçersiz, kullanıcıyı uyar
+                                    user_id = filename.replace("user_", "").replace(".json", "")
+                                    warning_message = f"""
+⚠️ **LİSANS GEÇERSİZ!**
+
+🔑 **Lisans Anahtarı:** {license_key[:10]}...
+
+❌ **Lisansınız artık geçerli değil!**
+
+💬 **Yeni lisans için:** @ApfelTradingAdmin ile iletişime geçin.
+
+🔄 **Bot kullanımı durduruldu...**
+"""
+                                    telegram_bot.bot.send_message(user_id, warning_message, parse_mode='Markdown')
+                                    
+                                    # Kullanıcı dosyasını sil
+                                    os.remove(f"{storage_dir}/{filename}")
+                                    updated_count += 1
+                                    print(f"🗑️ Kullanıcı {user_id} lisansı geçersiz, dosya silindi")
+                        except Exception as e:
+                            print(f"Kullanıcı kontrol hatası: {e}")
+                
+                session['message'] = f'🔄 Lisanslar yenilendi! {updated_count} kullanıcı güncellendi.'
+            else:
+                session['message'] = '🔄 Lisanslar yenilendi!'
+    except Exception as e:
+        print(f"Lisans yenileme hatası: {e}")
+        session['message'] = '🔄 Lisanslar yenilendi!'
     
     return redirect('/admin')
 
