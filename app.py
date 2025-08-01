@@ -30,12 +30,19 @@ def run_bot():
         exec(open("telegram_bot.py").read())
     except Exception as e:
         print(f"❌ Bot başlatma hatası: {e}")
+        print("⚠️ Bot hatası olsa bile admin panel çalışmaya devam edecek")
 
 # Bot thread'ini başlat
 if bot_token:
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    print("✅ Bot thread başlatıldı")
+    try:
+        bot_thread = threading.Thread(target=run_bot, daemon=True)
+        bot_thread.start()
+        print("✅ Bot thread başlatıldı")
+    except Exception as e:
+        print(f"⚠️ Bot thread başlatılamadı: {e}")
+        print("⚠️ Admin panel çalışmaya devam edecek")
+else:
+    print("⚠️ Bot token bulunamadı, sadece admin panel çalışacak")
 
 # Admin panel HTML template
 ADMIN_TEMPLATE = """
