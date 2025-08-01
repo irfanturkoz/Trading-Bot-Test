@@ -822,45 +822,67 @@ def main():
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
     print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
     
-    try:
-        # Webhook'u temizle
+    # Conflict çözümü için daha güçlü yaklaşım
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
         try:
-            bot.remove_webhook()
-            print("✅ Webhook temizlendi")
-        except:
-            pass
-        
-        # Conflict kontrolü - önceki instance'ları temizle
-        try:
-            bot.get_me()
-            print("✅ Bot bağlantısı başarılı")
-        except Exception as e:
-            if "Conflict" in str(e):
-                print("⚠️ Bot çakışması tespit edildi! 30 saniye bekleniyor...")
-                time.sleep(30)
-                try:
-                    bot.remove_webhook()
-                    time.sleep(5)
-                except:
-                    pass
-        
-        # Bot'u başlat
-        bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
-    except KeyboardInterrupt:
-        print("\n👋 Bot durduruldu.")
-    except Exception as e:
-        print(f"❌ Bot hatası: {e}")
-        if "Conflict" in str(e):
-            print("⚠️ Conflict hatası! Bot yeniden başlatılıyor...")
-            time.sleep(30)
+            # Webhook'u temizle
             try:
                 bot.remove_webhook()
-                time.sleep(5)
-                main()  # Tekrar dene
+                print("✅ Webhook temizlendi")
+                time.sleep(2)
             except:
-                print("❌ Bot yeniden başlatılamadı!")
-        else:
-            print(f"❌ Beklenmeyen hata: {e}")
+                pass
+            
+            # Bot bağlantısını test et
+            try:
+                bot_info = bot.get_me()
+                print(f"✅ Bot bağlantısı başarılı: @{bot_info.username}")
+            except Exception as e:
+                if "Conflict" in str(e):
+                    print(f"⚠️ Bot çakışması tespit edildi! (Deneme {retry_count + 1}/{max_retries})")
+                    print("🔄 60 saniye bekleniyor...")
+                    time.sleep(60)
+                    retry_count += 1
+                    continue
+                else:
+                    print(f"❌ Bot bağlantı hatası: {e}")
+                    retry_count += 1
+                    time.sleep(30)
+                    continue
+            
+            # Bot'u başlat
+            print("🚀 Bot polling başlatılıyor...")
+            bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
+            break
+            
+        except KeyboardInterrupt:
+            print("\n👋 Bot durduruldu.")
+            break
+        except Exception as e:
+            print(f"❌ Bot hatası: {e}")
+            if "Conflict" in str(e):
+                retry_count += 1
+                if retry_count < max_retries:
+                    print(f"⚠️ Conflict hatası! Yeniden deneniyor... (Deneme {retry_count}/{max_retries})")
+                    print("🔄 60 saniye bekleniyor...")
+                    time.sleep(60)
+                    try:
+                        bot.remove_webhook()
+                        time.sleep(5)
+                    except:
+                        pass
+                else:
+                    print("❌ Maksimum deneme sayısına ulaşıldı. Bot durduruluyor.")
+                    break
+            else:
+                print(f"❌ Beklenmeyen hata: {e}")
+                break
+    
+    if retry_count >= max_retries:
+        print("⚠️ Bot çakışması çözülemedi. Admin panel çalışmaya devam edecek.")
 
 # Bot'u başlat
 if __name__ == "__main__":
