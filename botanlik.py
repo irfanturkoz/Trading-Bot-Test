@@ -451,10 +451,141 @@ def calculate_three_tp_levels(entry_price, current_tp, current_sl, direction, fi
     }
 
 
-def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
+def calculate_atr_volatility(df, period=14):
     """
-    Düzeltilmiş TP ve SL optimizasyonu - Gerçekçi R/R oranları (1.2-1.8 arası)
+    ATR (Average True Range) bazlı volatilite hesaplar
     """
+    try:
+        if df is None or len(df) < period:
+            return 0.02  # Default volatilite
+        
+        # True Range hesapla
+        df['prev_close'] = df['close'].shift(1)
+        df['tr1'] = df['high'] - df['low']
+        df['tr2'] = abs(df['high'] - df['prev_close'])
+        df['tr3'] = abs(df['low'] - df['prev_close'])
+        df['true_range'] = df[['tr1', 'tr2', 'tr3']].max(axis=1)
+        
+        # ATR hesapla
+        atr = df['true_range'].rolling(window=period).mean().iloc[-1]
+        current_price = df['close'].iloc[-1]
+        
+        # Volatilite yüzdesi
+        volatility = atr / current_price if current_price > 0 else 0.02
+        return min(0.15, max(0.01, volatility))  # %1-15 arası sınırla
+    except:
+        return 0.02
+
+def calculate_trend_strength(df):
+    """
+    Trend gücünü ADX ve MA eğimi ile hesaplar
+    """
+    try:
+        if df is None or len(df) < 25:
+            return 0.5  # Nötr
+        
+        # ADX hesapla (basit versiyon)
+        adx_data = calculate_adx(df)
+        adx_value = adx_data.get('adx', 25) if adx_data else 25
+        
+        # MA eğimi
+        ma20 = df['close'].rolling(window=20).mean()
+        ma_slope = (ma20.iloc[-1] - ma20.iloc[-5]) / ma20.iloc[-5] if len(ma20) >= 5 else 0
+        
+        # Trend gücü skoru (0-1 arası)
+        adx_score = min(1.0, adx_value / 50.0)  # ADX 50+ güçlü trend
+        slope_score = min(1.0, abs(ma_slope) * 10)  # MA eğimi
+        
+        return (adx_score + slope_score) / 2
+    except:
+        return 0.5
+
+def calculate_momentum_score(df):
+    """
+    RSI ve MACD bazlı momentum skoru
+    """
+    try:
+        if df is None or len(df) < 26:
+            return 0.5
+        
+        # RSI hesapla
+        delta = df['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1] if not rsi.empty else 50
+        
+        # MACD hesapla
+        macd_data = calculate_macd(df)
+        macd_signal = 0
+        if macd_data and 'histogram' in macd_data:
+            macd_signal = 1 if macd_data['histogram'] > 0 else -1
+        
+        # Momentum skoru (0-1 arası)
+        rsi_score = abs(current_rsi - 50) / 50  # RSI'ın 50'den uzaklığı
+        macd_score = 0.5 + (macd_signal * 0.3)  # MACD sinyali
+        
+        return (rsi_score + macd_score) / 2
+    except:
+        return 0.5
+
+def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None, df=None, formation_type=None):
+    """
+    GELİŞMİŞ DİNAMİK R/R OPTİMİZASYONU
+    
+    Volatilite, trend gücü, teknik seviyeler ve momentum bazlı
+    gerçekçi R/R hesaplama sistemi (1.1-3.5 arası dinamik)
+    """
+    
+    # Volatilite analizi
+    volatility = calculate_atr_volatility(df) if df is not None else 0.02
+    
+    # Trend gücü analizi
+    trend_strength = calculate_trend_strength(df) if df is not None else 0.5
+    
+    # Momentum analizi
+    momentum = calculate_momentum_score(df) if df is not None else 0.5
+    
+    # Formasyon bazlı R/R çarpanı
+    formation_multiplier = {
+        'TOBO': 1.2,      # Güçlü formasyon
+        'OBO': 1.1,       # Orta güçlü
+        'WEDGE': 1.3,     # Yüksek potansiyel
+        'TRIANGLE': 1.15, # Orta
+        'FLAG': 1.25,     # Güçlü devam
+        'CUP': 1.4        # Çok güçlü
+    }.get(formation_type, 1.0)
+    
+    # Dinamik R/R aralığı hesapla
+    base_rr_min = 1.1
+    base_rr_max = 2.0
+    
+    # Volatilite etkisi: Yüksek volatilite → Daha yüksek R/R
+    volatility_boost = volatility * 8  # 0.01-0.15 → 0.08-1.2
+    
+    # Trend gücü etkisi: Güçlü trend → Daha yüksek R/R
+    trend_boost = trend_strength * 0.8  # 0-1 → 0-0.8
+    
+    # Momentum etkisi
+    momentum_boost = momentum * 0.6  # 0-1 → 0-0.6
+    
+    # Dinamik R/R aralığı
+    dynamic_rr_min = base_rr_min + (volatility_boost * 0.3)
+    dynamic_rr_max = base_rr_max + volatility_boost + trend_boost + momentum_boost
+    
+    # Formasyon çarpanı uygula
+    dynamic_rr_max *= formation_multiplier
+    
+    # Maksimum sınırları
+    dynamic_rr_min = max(1.1, min(dynamic_rr_min, 1.8))
+    dynamic_rr_max = max(dynamic_rr_min + 0.3, min(dynamic_rr_max, 3.5))
+    
+    print(f" Dinamik R/R Analizi:")
+    print(f"   Volatilite: {volatility:.3f} | Trend: {trend_strength:.2f} | Momentum: {momentum:.2f}")
+    print(f"   Formasyon: {formation_type} (x{formation_multiplier})")
+    print(f"   R/R Aralığı: {dynamic_rr_min:.2f} - {dynamic_rr_max:.2f}")
+    
     if direction == 'Long':
         # Mantık kontrolü
         if entry_price <= current_sl or current_tp <= entry_price:
@@ -465,74 +596,93 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
         current_risk = (entry_price - current_sl) / entry_price
         current_rr = current_reward / current_risk if current_risk > 0 else 0
         
-        # R/R < 1.2 ise optimize et
-        if current_rr < 1.2:
-            # Daha yakın Fibonacci seviyeleri
-            tp_options = []
-            for level in ['0.236', '0.382', '0.5']:
-                if level in fibo_levels and fibo_levels[level] > entry_price:
-                    tp_options.append(fibo_levels[level])
-            
-            sl_options = []
-            for level in ['0.5', '0.618']:
-                if level in fibo_levels and fibo_levels[level] < entry_price:
-                    sl_options.append(fibo_levels[level])
-            
-            if bb_data and bb_data['lower_band'] < entry_price:
-                sl_options.append(bb_data['lower_band'])
-            
-            # Tüm kombinasyonları topla
-            all_options = []
-            for tp in tp_options:
-                for sl in sl_options:
-                    if sl >= entry_price:
-                        continue
-                    
-                    reward = (tp - entry_price) / entry_price
-                    risk = (entry_price - sl) / entry_price
-                    rr = reward / risk if risk > 0 else 0
-                    
-                    # 1.2-1.8 arası
-                    if 1.2 <= rr <= 1.8:
-                        all_options.append({
-                            'tp': tp,
-                            'sl': sl,
-                            'rr': rr
-                        })
-            
-            # Dengeli R/R oranı seç (1.2-1.8 arası çeşitli dağılım)
-            if all_options:
-                # R/R oranlarına göre ağırlıklandırma
-                weighted_options = []
-                for opt in all_options:
-                    rr = opt['rr']
-                    # 1.2-1.4 arası: %40 ağırlık
-                    if 1.2 <= rr <= 1.4:
-                        weight = 0.4
-                    # 1.4-1.6 arası: %35 ağırlık  
-                    elif 1.4 < rr <= 1.6:
-                        weight = 0.35
-                    # 1.6-1.8 arası: %25 ağırlık
-                    elif 1.6 < rr <= 1.8:
-                        weight = 0.25
-                    else:
-                        weight = 0.0
-                    
-                    weighted_options.append((opt, weight))
+        # TP ve SL seçenekleri oluştur
+        tp_options = []
+        sl_options = []
+        
+        # Fibonacci seviyeleri
+        fibo_tp_levels = ['0.236', '0.382', '0.5', '0.618', '0.786', '1.0', '1.272']
+        for level in fibo_tp_levels:
+            if level in fibo_levels and fibo_levels[level] > entry_price:
+                tp_options.append(('Fibo ' + level, fibo_levels[level]))
+        
+        fibo_sl_levels = ['0.786', '0.618', '0.5', '0.382', '0.236']
+        for level in fibo_sl_levels:
+            if level in fibo_levels and fibo_levels[level] < entry_price:
+                sl_options.append(('Fibo ' + level, fibo_levels[level]))
+        
+        # Volatilite bazlı dinamik seçenekler
+        vol_multipliers = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+        for mult in vol_multipliers:
+            tp_price = entry_price * (1 + volatility * mult)
+            if tp_price > entry_price:
+                tp_options.append((f'Vol x{mult}', tp_price))
+        
+        sl_multipliers = [0.8, 1.0, 1.2, 1.5, 2.0]
+        for mult in sl_multipliers:
+            sl_price = entry_price * (1 - volatility * mult)
+            if sl_price < entry_price:
+                sl_options.append((f'Vol x{mult}', sl_price))
+        
+        # Bollinger Bands
+        if bb_data:
+            if bb_data.get('upper_band', 0) > entry_price:
+                tp_options.append(('BB Upper', bb_data['upper_band']))
+            if bb_data.get('lower_band', 0) < entry_price:
+                sl_options.append(('BB Lower', bb_data['lower_band']))
+        
+        # Tüm kombinasyonları değerlendir
+        valid_options = []
+        for tp_name, tp_price in tp_options:
+            for sl_name, sl_price in sl_options:
+                if sl_price >= entry_price:
+                    continue
                 
-                # Ağırlıklı rastgele seçim
-                import random
-                options, weights = zip(*weighted_options)
-                best_option = random.choices(options, weights=weights, k=1)[0]
-                return best_option['tp'], best_option['sl'], best_option['rr']
+                reward = (tp_price - entry_price) / entry_price
+                risk = (entry_price - sl_price) / entry_price
+                rr = reward / risk if risk > 0 else 0
+                
+                # Dinamik R/R aralığında mı?
+                if dynamic_rr_min <= rr <= dynamic_rr_max:
+                    # Teknik seviye skoru
+                    tech_score = 0
+                    if 'Fibo' in tp_name: tech_score += 2
+                    if 'Fibo' in sl_name: tech_score += 2
+                    if 'BB' in tp_name or 'BB' in sl_name: tech_score += 1
+                    
+                    # Volatilite uyum skoru
+                    vol_score = 0
+                    if 'Vol' in tp_name or 'Vol' in sl_name: vol_score += 1
+                    
+                    # Toplam skor
+                    total_score = tech_score + vol_score + (rr * 2)
+                    
+                    valid_options.append({
+                        'tp': tp_price,
+                        'sl': sl_price,
+                        'rr': rr,
+                        'tp_name': tp_name,
+                        'sl_name': sl_name,
+                        'score': total_score
+                    })
+        
+        # En iyi seçeneği bul
+        if valid_options:
+            # Skora göre sırala ve en iyilerinden birini seç
+            valid_options.sort(key=lambda x: x['score'], reverse=True)
+            top_options = valid_options[:min(5, len(valid_options))]
             
-            return current_tp, current_sl, current_rr
-        else:
-            # Mevcut R/R'yi kontrol et
-            if current_rr > 1.8:
-                new_tp = entry_price + (entry_price - current_sl) * 1.8
-                return new_tp, current_sl, 1.8
-            return current_tp, current_sl, current_rr
+            # Üst seçeneklerden rastgele birini seç
+            import random
+            best_option = random.choice(top_options)
+            
+            print(f"   Seçilen: TP={best_option['tp_name']} | SL={best_option['sl_name']} | R/R={best_option['rr']:.2f}")
+            
+            return best_option['tp'], best_option['sl'], best_option['rr']
+        
+        # Geçerli seçenek bulunamazsa mevcut değerleri döndür
+        print(f"   Geçerli seçenek bulunamadı, mevcut R/R: {current_rr:.2f}")
+        return current_tp, current_sl, current_rr
     
     else:  # Short
         # Mantık kontrolü
@@ -544,74 +694,93 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
         current_risk = (current_sl - entry_price) / entry_price
         current_rr = current_reward / current_risk if current_risk > 0 else 0
         
-        # R/R < 1.2 ise optimize et
-        if current_rr < 1.2:
-            # Daha yakın Fibonacci seviyeleri
-            tp_options = []
-            for level in ['0.5', '0.382', '0.236']:
-                if level in fibo_levels and fibo_levels[level] < entry_price:
-                    tp_options.append(fibo_levels[level])
-            
-            sl_options = []
-            for level in ['0.618', '0.5']:
-                if level in fibo_levels and fibo_levels[level] > entry_price:
-                    sl_options.append(fibo_levels[level])
-            
-            if bb_data and bb_data['upper_band'] > entry_price:
-                sl_options.append(bb_data['upper_band'])
-            
-            # Tüm kombinasyonları topla
-            all_options = []
-            for tp in tp_options:
-                for sl in sl_options:
-                    if sl <= entry_price:
-                        continue
-                    
-                    reward = (entry_price - tp) / entry_price
-                    risk = (sl - entry_price) / entry_price
-                    rr = reward / risk if risk > 0 else 0
-                    
-                    # 1.2-1.8 arası
-                    if 1.2 <= rr <= 1.8:
-                        all_options.append({
-                            'tp': tp,
-                            'sl': sl,
-                            'rr': rr
-                        })
-            
-            # Dengeli R/R oranı seç (1.2-1.8 arası çeşitli dağılım)
-            if all_options:
-                # R/R oranlarına göre ağırlıklandırma
-                weighted_options = []
-                for opt in all_options:
-                    rr = opt['rr']
-                    # 1.2-1.4 arası: %40 ağırlık
-                    if 1.2 <= rr <= 1.4:
-                        weight = 0.4
-                    # 1.4-1.6 arası: %35 ağırlık  
-                    elif 1.4 < rr <= 1.6:
-                        weight = 0.35
-                    # 1.6-1.8 arası: %25 ağırlık
-                    elif 1.6 < rr <= 1.8:
-                        weight = 0.25
-                    else:
-                        weight = 0.0
-                    
-                    weighted_options.append((opt, weight))
+        # TP ve SL seçenekleri oluştur (Short için ters)
+        tp_options = []
+        sl_options = []
+        
+        # Fibonacci seviyeleri
+        fibo_tp_levels = ['0.786', '0.618', '0.5', '0.382', '0.236']
+        for level in fibo_tp_levels:
+            if level in fibo_levels and fibo_levels[level] < entry_price:
+                tp_options.append(('Fibo ' + level, fibo_levels[level]))
+        
+        fibo_sl_levels = ['0.236', '0.382', '0.5', '0.618', '0.786']
+        for level in fibo_sl_levels:
+            if level in fibo_levels and fibo_levels[level] > entry_price:
+                sl_options.append(('Fibo ' + level, fibo_levels[level]))
+        
+        # Volatilite bazlı dinamik seçenekler
+        vol_multipliers = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+        for mult in vol_multipliers:
+            tp_price = entry_price * (1 - volatility * mult)
+            if tp_price < entry_price:
+                tp_options.append((f'Vol x{mult}', tp_price))
+        
+        sl_multipliers = [0.8, 1.0, 1.2, 1.5, 2.0]
+        for mult in sl_multipliers:
+            sl_price = entry_price * (1 + volatility * mult)
+            if sl_price > entry_price:
+                sl_options.append((f'Vol x{mult}', sl_price))
+        
+        # Bollinger Bands
+        if bb_data:
+            if bb_data.get('lower_band', 0) < entry_price:
+                tp_options.append(('BB Lower', bb_data['lower_band']))
+            if bb_data.get('upper_band', 0) > entry_price:
+                sl_options.append(('BB Upper', bb_data['upper_band']))
+        
+        # Tüm kombinasyonları değerlendir
+        valid_options = []
+        for tp_name, tp_price in tp_options:
+            for sl_name, sl_price in sl_options:
+                if sl_price <= entry_price:
+                    continue
                 
-                # Ağırlıklı rastgele seçim
-                import random
-                options, weights = zip(*weighted_options)
-                best_option = random.choices(options, weights=weights, k=1)[0]
-                return best_option['tp'], best_option['sl'], best_option['rr']
+                reward = (entry_price - tp_price) / entry_price
+                risk = (sl_price - entry_price) / entry_price
+                rr = reward / risk if risk > 0 else 0
+                
+                # Dinamik R/R aralığında mı?
+                if dynamic_rr_min <= rr <= dynamic_rr_max:
+                    # Teknik seviye skoru
+                    tech_score = 0
+                    if 'Fibo' in tp_name: tech_score += 2
+                    if 'Fibo' in sl_name: tech_score += 2
+                    if 'BB' in tp_name or 'BB' in sl_name: tech_score += 1
+                    
+                    # Volatilite uyum skoru
+                    vol_score = 0
+                    if 'Vol' in tp_name or 'Vol' in sl_name: vol_score += 1
+                    
+                    # Toplam skor
+                    total_score = tech_score + vol_score + (rr * 2)
+                    
+                    valid_options.append({
+                        'tp': tp_price,
+                        'sl': sl_price,
+                        'rr': rr,
+                        'tp_name': tp_name,
+                        'sl_name': sl_name,
+                        'score': total_score
+                    })
+        
+        # En iyi seçeneği bul
+        if valid_options:
+            # Skora göre sırala ve en iyilerinden birini seç
+            valid_options.sort(key=lambda x: x['score'], reverse=True)
+            top_options = valid_options[:min(5, len(valid_options))]
             
-            return current_tp, current_sl, current_rr
-        else:
-            # Mevcut R/R'yi kontrol et
-            if current_rr > 1.8:
-                new_tp = entry_price - (current_sl - entry_price) * 1.8
-                return new_tp, current_sl, 1.8
-            return current_tp, current_sl, current_rr
+            # Üst seçeneklerden rastgele birini seç
+            import random
+            best_option = random.choice(top_options)
+            
+            print(f"   Seçilen: TP={best_option['tp_name']} | SL={best_option['sl_name']} | R/R={best_option['rr']:.2f}")
+            
+            return best_option['tp'], best_option['sl'], best_option['rr']
+        
+        # Geçerli seçenek bulunamazsa mevcut değerleri döndür
+        print(f"   Geçerli seçenek bulunamadı, mevcut R/R: {current_rr:.2f}")
+        return current_tp, current_sl, current_rr
 
 def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
     """
@@ -1069,24 +1238,7 @@ def main():
                     formation_score = formation_signal['score']
                     formation_confidence = formation_signal['confidence']
                     
-                    print(f"   🎯 GELİŞMİŞ FORMASYON: {formation_type}")
-                    print(f"   🎯 Skor: {formation_score:.1f} | Güven: {formation_confidence}")
-                    
-                    # Formasyon tipine göre kısa bilgi
-                    if 'DOUBLE_BOTTOM' in formation_type:
-                        print(f"   📊 Double Bottom - Kırılım: {'✅' if formation_signal.get('breakout_confirmed', False) else '❌'}")
-                    elif 'DOUBLE_TOP' in formation_type:
-                        print(f"   📊 Double Top - Kırılım: {'✅' if formation_signal.get('breakout_confirmed', False) else '❌'}")
-                    elif 'BULLISH_FLAG' in formation_type or 'BEARISH_FLAG' in formation_type:
-                        print(f"   📊 Flag - Kırılım: {'✅' if formation_signal.get('breakout_confirmed', False) else '❌'}")
-                    elif 'ASCENDING_TRIANGLE' in formation_type or 'DESCENDING_TRIANGLE' in formation_type:
-                        print(f"   📊 Triangle - Kırılım: {'✅' if formation_signal.get('breakout_confirmed', False) else '❌'}")
-                    elif 'SYMMETRICAL_TRIANGLE' in formation_type:
-                        print(f"   📊 Symmetrical Triangle - Kırılım: {'✅' if formation_signal.get('breakout_confirmed', False) else '❌'}")
-                    elif 'RISING_CHANNEL' in formation_type:
-                        print(f"   📊 Rising Channel - Kırılım: {'✅' if formation_signal.get('breakout_confirmed', False) else '❌'}")
-                    elif 'DIVERGENCE' in formation_type:
-                        print(f"   📊 Divergence - Güç: {formation_signal.get('strength', 'N/A')}")
+                    # Formasyon logları kaldırıldı - Railway log limit için
 
                 # Flag & Pennant (Bayrak & Flama) formasyonu tespiti
                 flag_signal = detect_bullish_bearish_flag_advanced(df)
@@ -1094,7 +1246,7 @@ def main():
                     flag_type = flag_signal['type']
                     flag_score = flag_signal['score']
                     flag_confidence = flag_signal['confidence']
-                    print(f"   🚩 FLAG FORMASYONU: {flag_type} | Skor: {flag_score} | Güven: {flag_confidence}")
+                    # Flag formasyonu logu kaldırıldı - Railway log limit için
                     # 3 TP seviyesi hesapla
                     try:
                         tp_levels = calculate_three_tp_levels(
@@ -1481,24 +1633,7 @@ def main():
                             'obv': calculate_obv(df_tf),
                             'heikin_ashi': calculate_heikin_ashi(df_tf)
                         }
-                # Konsol çıktısı örneği
-                for tf in ind_results:
-                    print(f"\n[{symbol} - {tf.upper()}] İndikatörler:")
-                    ichi = ind_results[tf]['ichimoku']
-                    if ichi:
-                        print(f"  Ichimoku: {ichi['signal']} | Tenkan-Kijun: {ichi['tenkan_kijun_cross']} | Bulut: {ichi['cloud_bottom']:.2f}-{ichi['cloud_top']:.2f}")
-                    st = ind_results[tf]['supertrend']
-                    if st:
-                        print(f"  Supertrend: {st['signal']} | Band: {st['lowerband']:.2f}-{st['upperband']:.2f}")
-                    vwap = ind_results[tf]['vwap']
-                    if vwap:
-                        print(f"  VWAP: {vwap['signal']} | VWAP: {vwap['vwap']:.2f} | Fiyat: {vwap['price']:.2f}")
-                    obv = ind_results[tf]['obv']
-                    if obv:
-                        print(f"  OBV: {obv['obv_trend']} | Fiyat trendi: {obv['price_trend']} | Diverjans: {obv['divergence']}")
-                    ha = ind_results[tf]['heikin_ashi']
-                    if ha:
-                        print(f"  Heikin Ashi trend: {ha['trend']} | HA Close: {ha['ha_close']:.2f}")
+                # İndikatör logları kaldırıldı - Railway log limit için
                 
                 return None
             except Exception as e:
@@ -1516,14 +1651,14 @@ def main():
                 result = future.result()
                 completed += 1
                 
-                # İlerleme göster
-                if completed % 20 == 0:
+                # İlerleme göster (daha az sıklıkta)
+                if completed % 50 == 0:
                     progress = (completed / len(symbols)) * 100
                     print(f"📊 İlerleme: %{progress:.1f} ({completed}/{len(symbols)})")
                 
                 if result:
                     firsatlar.append(result)
-                    print(f"✅ Fırsat bulundu: {result['symbol']} - {result['yön']} ({result['formasyon']})")
+                    # Fırsat bulundu logu kaldırıldı - Railway log limit için
         
         # En iyi 10 fırsatı sırala ve yazdır
         all_firsatlar = sorted(firsatlar, key=lambda x: x['tpfark'], reverse=True)[:10]
@@ -2733,14 +2868,14 @@ def get_scan_results():
                 result = analyze_symbol(symbol, '4h')
                 completed += 1
                 
-                # İlerleme göster
-                if completed % 20 == 0:
+                # İlerleme göster (daha az sıklıkta)
+                if completed % 50 == 0:
                     progress = (completed / len(symbols)) * 100
                     print(f"📊 İlerleme: %{progress:.1f} ({completed}/{len(symbols)})")
                 
                 if result:
                     firsatlar.append(result)
-                    print(f"✅ {symbol}: {result['formasyon']} - R/R: {result['rr_ratio']:.2f}")
+                    # Fırsat bulundu logu kaldırıldı - Railway log limit için
                 
                 # Her 10 coin'de bir kısa bekleme (API limitlerini aşmamak için)
                 if completed % 10 == 0:
