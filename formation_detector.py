@@ -145,8 +145,8 @@ def detect_obo(df, window=30):
         sol_omuz = peaks[0]
         bas = peaks[1]
         sag_omuz = peaks[2]
-        # Omuzlar baştan aşağıda ve birbirine yakın olmalı - Daha sıkı kriterler
-        if sol_omuz < bas and sag_omuz < bas and abs(sol_omuz - sag_omuz) / bas < 0.10:
+        # Omuzlar baştan aşağıda ve birbirine yakın olmalı - Daha dengeli kriterler
+        if sol_omuz < bas and sag_omuz < bas and abs(sol_omuz - sag_omuz) / bas < 0.12:
             # Boyun çizgisi: sol ve sağ omuzun dip noktalarının ortalaması
             lows = df['low'][-window:].values
             sol_dip = lows[idx[0]]

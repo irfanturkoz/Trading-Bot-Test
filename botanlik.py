@@ -219,14 +219,14 @@ def calculate_signal_score(df, formation_type, formation_data, macd_data, bb_dat
     
     total_score += ma_score
     
-    # 3. MACD Ağırlığı (15 puan)
+    # 3. MACD Ağırlığı (20 puan) - Daha dengeli
     if macd_data:
         if macd_data['trend'] == 'Bullish':
-            macd_score = 15
+            macd_score = 20
             macd_signal = 'Long'
             signals.append(f"MACD (Bullish): +{macd_score}")
         else:
-            macd_score = 15
+            macd_score = 20
             macd_signal = 'Short'
             signals.append(f"MACD (Bearish): +{macd_score}")
     else:
@@ -235,14 +235,14 @@ def calculate_signal_score(df, formation_type, formation_data, macd_data, bb_dat
     
     total_score += macd_score
     
-    # 4. ADX Ağırlığı (10 puan)
+    # 4. ADX Ağırlığı (15 puan) - Daha dengeli
     if adx_data:
         if adx_data['trend_direction'] == 'Bullish':
-            adx_score = 10
+            adx_score = 15
             adx_signal = 'Long'
             signals.append(f"ADX (Bullish): +{adx_score}")
         else:
-            adx_score = 10
+            adx_score = 15
             adx_signal = 'Short'
             signals.append(f"ADX (Bearish): +{adx_score}")
     else:
@@ -251,14 +251,14 @@ def calculate_signal_score(df, formation_type, formation_data, macd_data, bb_dat
     
     total_score += adx_score
     
-    # 5. Bollinger Bands Ağırlığı (10 puan)
+    # 5. Bollinger Bands Ağırlığı (15 puan) - Daha dengeli
     if bb_data:
         if bb_data['signal'] == 'Oversold':
-            bb_score = 10
+            bb_score = 15
             bb_signal = 'Long'
             signals.append(f"Bollinger (Oversold): +{bb_score}")
         elif bb_data['signal'] == 'Overbought':
-            bb_score = 10
+            bb_score = 15
             bb_signal = 'Short'
             signals.append(f"Bollinger (Overbought): +{bb_score}")
         else:
