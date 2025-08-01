@@ -65,11 +65,18 @@ class LicenseManager:
                 with open(self.licenses_file, 'r') as f:
                     admin_licenses = json.load(f)
                 
+                print(f"📂 Admin lisansları yükleniyor...")
+                print(f"📋 Bulunan lisanslar: {list(admin_licenses.keys())}")
+                
                 # Admin lisanslarını mevcut listeye ekle
                 for key, value in admin_licenses.items():
                     self.valid_licenses[key] = value
+                    print(f"✅ Lisans eklendi: {key} - {value.get('type', 'unknown')}")
                     
                 print(f"📂 {len(admin_licenses)} admin lisansı yüklendi.")
+                print(f"📋 Toplam lisans sayısı: {len(self.valid_licenses)}")
+            else:
+                print(f"❌ {self.licenses_file} dosyası bulunamadı!")
         except Exception as e:
             print(f"❌ Admin lisansları yüklenemedi: {e}")
     
@@ -82,9 +89,18 @@ class LicenseManager:
         print(f"📋 Mevcut anahtarlar: {list(self.valid_licenses.keys())}")
         
         if license_key not in self.valid_licenses:
+            print(f"❌ Lisans bulunamadı: {license_key}")
             return False, "Geçersiz lisans anahtarı!"
         
         license_info = self.valid_licenses[license_key]
+        print(f"✅ Lisans bulundu: {license_info}")
+        
+        # Lisansın aktif olup olmadığını kontrol et
+        if not license_info.get('active', True):
+            print(f"❌ Lisans pasif: {license_key}")
+            return False, "Lisans pasif durumda!"
+        
+        print(f"✅ Lisans aktif: {license_key}")
         
         # Lisans bilgilerini kaydet
         license_data = {

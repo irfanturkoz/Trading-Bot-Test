@@ -1,13 +1,18 @@
 {
-  "key": "MONTHLY_20250731_165754_1M511J",
-  "type": "monthly",
-  "activated_date": "2025-07-31T17:04:22.238491",
-  "expiry_date": "2025-08-30T17:04:22.238504",
+  "key": "Admin2933818234A",
+  "type": "unlimited",
+  "activated_date": "2025-08-01T22:16:43.336138",
+  "expiry_date": null,
   "features": [
     "Temel Tarama",
     "Telegram Bildirimleri",
-    "Formasyon Analizi"
+    "Formasyon Analizi",
+    "\u00c3\u2013ncelikli Destek",
+    "\u00c3\u2013zel Formasyonlar",
+    "7/24 Destek",
+    "Admin \u00c3\u2013zellikleri",
+    "S\u00c4\u00b1n\u00c4\u00b1rs\u00c4\u00b1z Kullan\u00c4\u00b1m"
   ],
-  "price": 200,
+  "price": 0,
   "status": "active"
 }
