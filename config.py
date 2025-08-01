@@ -2,11 +2,10 @@
 
 import os
 
-BINANCE_API_KEY = os.environ.get('BINANCE_API_KEY', '')
-BINANCE_API_SECRET = os.environ.get('BINANCE_API_SECRET', '')
+# Telegram Bot Token
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 
-# Telegram Bot Ayarları
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '7977984015')
+# Admin Chat ID
+ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 # Diğer ayarlar buraya eklenebilir 
