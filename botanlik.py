@@ -500,10 +500,16 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
                             'rr': rr
                         })
             
-            # Rastgele seçim yap
+            # En iyi R/R oranını seç (1.5-1.8 arası tercih et)
             if all_options:
-                import random
-                best_option = random.choice(all_options)
+                # Önce 1.5-1.8 arası ara (en iyi aralık)
+                preferred_options = [opt for opt in all_options if 1.5 <= opt['rr'] <= 1.8]
+                if preferred_options:
+                    # Tercih edilen aralıktan en yüksek R/R'yi seç
+                    best_option = max(preferred_options, key=lambda x: x['rr'])
+                else:
+                    # Tercih edilen aralık yoksa en yüksek R/R'yi seç
+                    best_option = max(all_options, key=lambda x: x['rr'])
                 return best_option['tp'], best_option['sl'], best_option['rr']
             
             return current_tp, current_sl, current_rr
@@ -559,10 +565,16 @@ def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_le
                             'rr': rr
                         })
             
-            # Rastgele seçim yap
+            # En iyi R/R oranını seç (1.5-1.8 arası tercih et)
             if all_options:
-                import random
-                best_option = random.choice(all_options)
+                # Önce 1.5-1.8 arası ara (en iyi aralık)
+                preferred_options = [opt for opt in all_options if 1.5 <= opt['rr'] <= 1.8]
+                if preferred_options:
+                    # Tercih edilen aralıktan en yüksek R/R'yi seç
+                    best_option = max(preferred_options, key=lambda x: x['rr'])
+                else:
+                    # Tercih edilen aralık yoksa en yüksek R/R'yi seç
+                    best_option = max(all_options, key=lambda x: x['rr'])
                 return best_option['tp'], best_option['sl'], best_option['rr']
             
             return current_tp, current_sl, current_rr
