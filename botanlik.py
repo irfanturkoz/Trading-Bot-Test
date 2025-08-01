@@ -1186,7 +1186,7 @@ def main():
                             tp_levels = calculate_three_tp_levels(entry, tp, sl, 'Long', fibo_levels, bb_data, 'TOBO')
                             
                             # TP ve SL optimizasyonu
-                            optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, bb_data)
+                            optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Long', fibo_levels, bb_data)
                             
                             # R/R oranı kontrolü - Daha esnek kriterler
                             if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
@@ -1279,7 +1279,7 @@ def main():
                         # Farklı güç seviyelerinde sinyalleri kabul et
                         if short_percentage >= 40:  # %40+ short sinyali
                             # TP ve SL optimizasyonu
-                            optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Short', fibo_levels, bb_data)
+                            optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Short', fibo_levels, bb_data)
                             
                             # R/R oranı kontrolü - Daha esnek kriterler
                             if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
@@ -1356,7 +1356,7 @@ def main():
                         # Farklı güç seviyelerinde sinyalleri kabul et
                         if long_percentage >= 40:  # %40+ long sinyali
                             # TP ve SL optimizasyonu
-                            optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, bb_data)
+                            optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Long', fibo_levels, bb_data)
                             
                             # R/R oranı kontrolü - Daha esnek kriterler
                             if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
@@ -1673,7 +1673,7 @@ def main():
                             
                             if long_percentage >= 40:
                                 tp_levels = calculate_three_tp_levels(entry, tp, sl, 'Long', fibo_levels, bb_data, 'TOBO')
-                                optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, bb_data)
+                                optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Long', fibo_levels, bb_data)
                                 
                                 # 0.8:1 R/R kontrolü
                                 if 0.8 <= optimized_rr < 1.0:
@@ -1751,7 +1751,7 @@ def main():
                             short_percentage = (bearish_signals / total_signals) * 100
                             
                             if short_percentage >= 40:
-                                optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Short', fibo_levels, bb_data)
+                                optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Short', fibo_levels, bb_data)
                                 
                                 # 0.8:1 R/R kontrolü
                                 if 0.8 <= optimized_rr < 1.0:
@@ -2594,7 +2594,7 @@ def get_scan_results():
                     sl = tobo['neckline']
                     
                     # TP/SL optimizasyonu
-                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, None)
+                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Long', fibo_levels, None)
                     
                     # R/R oranı kontrolü - Daha esnek kriterler
                     if optimized_rr >= 0.5:  # 0.5:1'den yüksek olanları kabul et
@@ -2639,7 +2639,7 @@ def get_scan_results():
                     sl = falling_wedge.get('sl', current_price * 0.95)
                     
                     # TP/SL optimizasyonu
-                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl(entry, tp, sl, 'Long', fibo_levels, None)
+                    optimized_tp, optimized_sl, optimized_rr = optimize_tp_sl_fixed(entry, tp, sl, 'Long', fibo_levels, None)
                     
                     # R/R oranı kontrolü
                     if optimized_rr >= 0.5:
