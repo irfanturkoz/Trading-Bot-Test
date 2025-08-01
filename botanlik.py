@@ -453,7 +453,7 @@ def calculate_three_tp_levels(entry_price, current_tp, current_sl, direction, fi
 
 def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
     """
-    TP ve SL seviyelerini optimize eder - Gerçekçi R/R oranları (1.0-2.0 arası)
+    TP ve SL seviyelerini optimize eder - Gerçekçi R/R oranları (1.2-1.8 arası)
     """
     if direction == 'Long':
         # Mantık kontrolü: Long için entry > SL ve TP > entry olmalı
@@ -469,13 +469,13 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
         if current_rr < 1.0:
             # TP seçenekleri (Fibonacci seviyeleri) - daha yakın
             tp_options = []
-            for level in ['0.382', '0.5', '0.618']:
+            for level in ['0.236', '0.382', '0.5']:
                 if level in fibo_levels and fibo_levels[level] > entry_price:
                     tp_options.append((level, fibo_levels[level]))
             
             # SL seçenekleri (daha sıkı)
             sl_options = []
-            for level in ['0.618', '0.5']:
+            for level in ['0.5', '0.618']:
                 if level in fibo_levels and fibo_levels[level] < entry_price:
                     sl_options.append((level, fibo_levels[level]))
             
