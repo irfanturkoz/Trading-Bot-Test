@@ -8,4 +8,8 @@ services:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: ADMIN_CHAT_ID
-        sync: false 
+        sync: false
+    disk:
+      name: persistent-storage
+      mountPath: /tmp/persistent_storage
+      sizeGB: 1 

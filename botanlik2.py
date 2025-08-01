@@ -728,6 +728,186 @@ def analyze_trading_scenarios(df, formation_type, formation_data, current_price,
     return scenarios, action_plan
 
 
+def analyze_symbol(symbol, interval='4h'):
+    """Tek bir sembolü analiz eder"""
+    try:
+        current_price = get_current_price(symbol)
+        if not current_price:
+            return None
+            
+        df = fetch_ohlcv(symbol, interval)
+        if df is None or df.empty or len(df) < 100:
+            return None
+        
+        # MA hesaplamaları
+        df['MA7'] = df['close'].rolling(window=7).mean()
+        df['MA25'] = df['close'].rolling(window=25).mean()
+        df['MA50'] = df['close'].rolling(window=50).mean()
+        df['MA99'] = df['close'].rolling(window=99).mean()
+        
+        ma_trend = None
+        if df['MA7'].iloc[-1] > df['MA25'].iloc[-1] > df['MA50'].iloc[-1] > df['MA99'].iloc[-1]:
+            ma_trend = 'Güçlü Yükseliş'
+        elif df['MA7'].iloc[-1] < df['MA25'].iloc[-1] < df['MA50'].iloc[-1] < df['MA99'].iloc[-1]:
+            ma_trend = 'Güçlü Düşüş'
+        else:
+            ma_trend = 'Kararsız'
+        
+        fibo_levels, fibo_high, fibo_low = calculate_fibonacci_levels(df)
+        
+        # Tüm formasyonları analiz et
+        all_tobo = find_all_tobo(df)
+        all_obo = find_all_obo(df)
+        falling_wedge = detect_falling_wedge(df)
+        rectangle = find_rectangle(df)
+        ascending_triangle = find_ascending_triangle(df)
+        descending_triangle = find_descending_triangle(df)
+        symmetrical_triangle = find_symmetrical_triangle(df)
+        broadening = find_broadening_formation(df)
+        
+        # En güçlü formasyonu belirle
+        formations = []
+        
+        if all_tobo:
+            tobo = all_tobo[-1]
+            formations.append({
+                'type': 'TOBO',
+                'data': tobo,
+                'direction': 'Long',
+                'tp': fibo_levels.get('0.382', current_price * 1.05),
+                'sl': tobo['neckline']
+            })
+        
+        if all_obo:
+            obo = all_obo[-1]
+            formations.append({
+                'type': 'OBO',
+                'data': obo,
+                'direction': 'Short',
+                'tp': fibo_levels.get('0.618', current_price * 0.95),
+                'sl': obo['neckline']
+            })
+        
+        if falling_wedge:
+            formations.append({
+                'type': 'Falling Wedge',
+                'data': falling_wedge,
+                'direction': 'Long',
+                'tp': falling_wedge.get('tp', current_price * 1.05),
+                'sl': falling_wedge.get('sl', current_price * 0.95)
+            })
+        
+        if rectangle and 'resistance' in rectangle and 'support' in rectangle:
+            formations.append({
+                'type': 'Rectangle',
+                'data': rectangle,
+                'direction': 'Long' if current_price > rectangle['resistance'] else 'Short',
+                'tp': rectangle['resistance'] if current_price > rectangle['resistance'] else rectangle['support'],
+                'sl': rectangle['support'] if current_price > rectangle['resistance'] else rectangle['resistance']
+            })
+        
+        if ascending_triangle and 'resistance' in ascending_triangle and 'support' in ascending_triangle:
+            formations.append({
+                'type': 'Ascending Triangle',
+                'data': ascending_triangle,
+                'direction': 'Long',
+                'tp': ascending_triangle['resistance'],
+                'sl': ascending_triangle['support']
+            })
+        
+        if descending_triangle and 'support' in descending_triangle and 'resistance' in descending_triangle:
+            formations.append({
+                'type': 'Descending Triangle',
+                'data': descending_triangle,
+                'direction': 'Short',
+                'tp': descending_triangle['support'],
+                'sl': descending_triangle['resistance']
+            })
+        
+        if symmetrical_triangle and 'upper' in symmetrical_triangle and 'lower' in symmetrical_triangle:
+            formations.append({
+                'type': 'Symmetrical Triangle',
+                'data': symmetrical_triangle,
+                'direction': 'Long' if ma_trend == 'Güçlü Yükseliş' else 'Short',
+                'tp': symmetrical_triangle['upper'],
+                'sl': symmetrical_triangle['lower']
+            })
+        
+        if broadening and 'current_resistance' in broadening and 'current_support' in broadening:
+            formations.append({
+                'type': 'Broadening Formation',
+                'data': broadening,
+                'direction': 'Long' if broadening['breakout_up'] else 'Short',
+                'tp': broadening['current_resistance'] if broadening['breakout_up'] else broadening['current_support'],
+                'sl': broadening['current_support'] if broadening['breakout_up'] else broadening['current_resistance']
+            })
+        
+        # En iyi formasyonu seç
+        if not formations:
+            return None
+        
+        # R/R oranına göre sırala
+        best_formation = None
+        best_rr = 0
+        
+        for formation in formations:
+            tp = formation['tp']
+            sl = formation['sl']
+            
+            if formation['direction'] == 'Long':
+                if tp > current_price > sl:
+                    rr = (tp - current_price) / (current_price - sl)
+                else:
+                    continue
+            else:
+                if sl > current_price > tp:
+                    rr = (current_price - tp) / (sl - current_price)
+                else:
+                    continue
+            
+            if rr > best_rr and rr >= 0.5 and rr <= 3.0:  # Minimum 0.5:1, Maksimum 3:1 R/R
+                best_rr = rr
+                best_formation = formation
+        
+        if not best_formation:
+            return None
+        
+        # Risk analizi
+        risk_analysis = calculate_optimal_risk(
+            symbol, current_price, best_formation['tp'], 
+            best_formation['sl'], best_formation['direction']
+        )
+        
+        # Sinyal gücü hesapla
+        macd_data = calculate_macd(df)
+        bb_data = calculate_bollinger_bands(df)
+        stoch_data = calculate_stochastic(df)
+        adx_data = calculate_adx(df)
+        
+        signal_strength = 70  # Varsayılan
+        if macd_data and 'Güçlü Yükseliş' in ma_trend and best_formation['direction'] == 'Long':
+            signal_strength += 10
+        if adx_data and adx_data.get('trend_direction') == 'Bullish' and best_formation['direction'] == 'Long':
+            signal_strength += 10
+        
+        return {
+            'symbol': symbol,
+            'yön': best_formation['direction'],
+            'formasyon': best_formation['type'],
+            'price': current_price,
+            'tp': best_formation['tp'],
+            'sl': best_formation['sl'],
+            'tpfark': abs(best_formation['tp'] - current_price) / current_price,
+            'risk_analysis': risk_analysis,
+            'signal_strength': min(95, signal_strength),
+            'rr_ratio': best_rr,
+            'tp_levels': None
+        }
+        
+    except Exception as e:
+        print(f"Hata {symbol}: {e}")
+        return None
+
 def main():
     interval = '4h'
     print("\n🤖 Otomatik Tarama Botu Başlatılıyor...")

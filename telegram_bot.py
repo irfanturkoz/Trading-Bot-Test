@@ -29,11 +29,11 @@ def send_welcome(message):
     user_name = message.from_user.first_name
     
     # Lisans kontrolü
-    license_status, license_result = check_user_license(user_id)
+    license_data = check_user_license(user_id)
     
-    if license_status:
+    if license_data:
         # Kullanıcının lisansı var
-        license_info = license_result
+        license_info = license_data
         welcome_text = f"""
 🤖 **Hoş Geldiniz {user_name}!**
 
@@ -111,10 +111,10 @@ def send_help(message):
 def send_status(message):
     """Lisans durumu"""
     user_id = message.from_user.id
-    license_status, license_result = check_user_license(user_id)
+    license_data = check_user_license(user_id)
     
-    if license_status:
-        license_info = license_result
+    if license_data:
+        license_info = license_data
         status_text = f"""
 📊 **Lisans Durumu**
 
@@ -145,7 +145,7 @@ def send_status(message):
 Lisans anahtarınızı buraya yazın.
 
 💬 **Lisans Satın Almak İçin:**
-@tgtradingbot ile iletişime geçin.
+@ApfelTradingAdmin ile iletişime geçin.
 """
     
     bot.reply_to(message, status_text, parse_mode='Markdown')
@@ -156,8 +156,8 @@ def start_scan(message):
     user_id = message.from_user.id
     
     # Kullanıcının lisansını kontrol et
-    license_status, license_result = check_user_license(user_id)
-    if not license_status:
+    license_data = check_user_license(user_id)
+    if not license_data:
         bot.reply_to(message, "❌ **Lisansınız bulunamadı!**\n\n🔑 Lisans anahtarınızı girin.", parse_mode='Markdown')
         return
     
@@ -383,39 +383,21 @@ def handle_license_input(message):
 def handle_all_messages(message):
     """Diğer tüm mesajlar"""
     user_id = message.from_user.id
-    license_status, license_result = check_user_license(user_id)
+    license_data = check_user_license(user_id)
     
-    if not license_status:
+    if not license_data:
         # Lisans yoksa lisans anahtarı iste
-        bot.reply_to(message, "🔑 **Lisans Anahtarınızı Gönderin:**\n\nLisans anahtarınızı buraya yazın.\n\n💬 **Lisans Satın Almak İçin:** @tgtradingbot")
+        bot.reply_to(message, "🔑 **Lisans Anahtarınızı Gönderin:**\n\nLisans anahtarınızı buraya yazın.\n\n💬 **Lisans Satın Almak İçin:** @ApfelTradingAdmin")
     else:
         # Lisans varsa yardım mesajı
         bot.reply_to(message, "❓ Yardım için /help yazın.\n🔍 Coin taraması için '🔍 Coin Tara' butonuna basın.")
 
-def check_user_license(user_id):
-    """Kullanıcının lisansını kontrol eder"""
-    try:
-        if os.path.exists(f"user_licenses/{user_id}.json"):
-            with open(f"user_licenses/{user_id}.json", 'r') as f:
-                license_data = json.load(f)
-            
-            # Süre kontrolü
-            if license_data['expiry_date']:
-                expiry_date = datetime.fromisoformat(license_data['expiry_date'])
-                if datetime.now() > expiry_date:
-                    return False, "Lisans süresi dolmuş"
-            
-            return True, license_data
-    except Exception as e:
-        pass
-    
-    return False, "Lisans bulunamadı"
-
 def save_user_license(user_id, license_info):
-    """Kullanıcı lisansını kaydeder"""
+    """Kullanıcı lisansını persistent storage'a kaydeder"""
     try:
-        # Klasör oluştur
-        os.makedirs("user_licenses", exist_ok=True)
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        os.makedirs(storage_dir, exist_ok=True)
         
         # Lisans bilgilerini kaydet
         license_data = {
@@ -429,20 +411,53 @@ def save_user_license(user_id, license_info):
             "last_scan_time": None  # İlk tarama zamanı
         }
         
-        with open(f"user_licenses/{user_id}.json", 'w') as f:
+        # Persistent storage'a kaydet
+        with open(f"{storage_dir}/user_{user_id}.json", 'w') as f:
             json.dump(license_data, f, indent=2)
+            
+        print(f"✅ Lisans kaydedildi: user_{user_id}.json")
             
     except Exception as e:
         print(f"Lisans kaydedilemedi: {e}")
 
+def check_user_license(user_id):
+    """Kullanıcının lisans durumunu kontrol eder"""
+    try:
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        license_file = f"{storage_dir}/user_{user_id}.json"
+        
+        if os.path.exists(license_file):
+            with open(license_file, 'r') as f:
+                user_license = json.load(f)
+            
+            # Lisans süresini kontrol et
+            expiry_date = user_license.get('expiry_date')
+            if expiry_date:
+                expiry = datetime.fromisoformat(expiry_date)
+                if datetime.now() > expiry:
+                    return None  # Süresi dolmuş
+            
+            return user_license
+        
+        return None
+        
+    except Exception as e:
+        print(f"Lisans kontrolü hatası: {e}")
+        return None
+
 def can_user_scan(user_id):
     """Kullanıcının tarama yapıp yapamayacağını kontrol eder"""
     try:
-        if os.path.exists(f"user_licenses/{user_id}.json"):
-            with open(f"user_licenses/{user_id}.json", 'r') as f:
-                license_data = json.load(f)
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        license_file = f"{storage_dir}/user_{user_id}.json"
+        
+        if os.path.exists(license_file):
+            with open(license_file, 'r') as f:
+                user_license = json.load(f)
             
-            last_scan_time = license_data.get('last_scan_time')
+            last_scan_time = user_license.get('last_scan_time')
             if last_scan_time is None:
                 return True  # İlk tarama
             
@@ -452,23 +467,29 @@ def can_user_scan(user_id):
             
             # 3 saat = 10800 saniye
             return time_diff.total_seconds() >= 10800
-            
+        
+        return False
+        
     except Exception as e:
         print(f"Tarama kontrolü hatası: {e}")
     
-    return True
+    return False
 
 def save_last_scan_time(user_id):
-    """Son tarama zamanını kaydeder"""
+    """Son tarama zamanını persistent storage'a kaydeder"""
     try:
-        if os.path.exists(f"user_licenses/{user_id}.json"):
-            with open(f"user_licenses/{user_id}.json", 'r') as f:
-                license_data = json.load(f)
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        license_file = f"{storage_dir}/user_{user_id}.json"
+        
+        if os.path.exists(license_file):
+            with open(license_file, 'r') as f:
+                user_license = json.load(f)
             
-            license_data['last_scan_time'] = datetime.now().isoformat()
+            user_license['last_scan_time'] = datetime.now().isoformat()
             
-            with open(f"user_licenses/{user_id}.json", 'w') as f:
-                json.dump(license_data, f, indent=2)
+            with open(license_file, 'w') as f:
+                json.dump(user_license, f, indent=2)
                 
     except Exception as e:
         print(f"Tarama zamanı kaydedilemedi: {e}")
@@ -476,11 +497,15 @@ def save_last_scan_time(user_id):
 def get_remaining_scan_time(user_id):
     """Kalan tarama süresini döndürür"""
     try:
-        if os.path.exists(f"user_licenses/{user_id}.json"):
-            with open(f"user_licenses/{user_id}.json", 'r') as f:
-                license_data = json.load(f)
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        license_file = f"{storage_dir}/user_{user_id}.json"
+        
+        if os.path.exists(license_file):
+            with open(license_file, 'r') as f:
+                user_license = json.load(f)
             
-            last_scan_time = license_data.get('last_scan_time')
+            last_scan_time = user_license.get('last_scan_time')
             if last_scan_time is None:
                 return "Hemen tarama yapabilirsiniz"
             
@@ -501,7 +526,9 @@ def get_remaining_scan_time(user_id):
                 return f"{hours} saat {minutes} dakika"
             else:
                 return f"{minutes} dakika"
-                
+        
+        return "Lisans bulunamadı"
+            
     except Exception as e:
         print(f"Kalan süre hesaplama hatası: {e}")
     
@@ -510,42 +537,67 @@ def get_remaining_scan_time(user_id):
 # Otomatik tarama fonksiyonu kaldırıldı - artık manuel tarama
 
 def get_active_users():
-    """Aktif lisanslı kullanıcıları al"""
-    active_users = []
+    """Aktif kullanıcıları döndürür"""
     try:
-        if os.path.exists("user_licenses"):
-            for filename in os.listdir("user_licenses"):
-                if filename.endswith(".json"):
-                    user_id = filename.replace(".json", "")
-                    license_status, _ = check_user_license(user_id)
-                    if license_status:
-                        active_users.append(user_id)
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        
+        if not os.path.exists(storage_dir):
+            return []
+        
+        active_users = []
+        for filename in os.listdir(storage_dir):
+            if filename.startswith("user_") and filename.endswith(".json"):
+                try:
+                    with open(f"{storage_dir}/{filename}", 'r') as f:
+                        user_license = json.load(f)
+                    
+                    expiry_date = user_license.get('expiry_date')
+                    if expiry_date:
+                        expiry = datetime.fromisoformat(expiry_date)
+                        if datetime.now() <= expiry:
+                            active_users.append({
+                                'user_id': user_license.get('user_id'),
+                                'type': user_license.get('type'),
+                                'activated_date': user_license.get('activated_date'),
+                                'expiry_date': expiry_date
+                            })
+                except:
+                    continue
+        
+        return active_users
+        
     except Exception as e:
-        print(f"Aktif kullanıcılar alınamadı: {e}")
-    
-    return active_users
-
+        print(f"Aktif kullanıcı listesi hatası: {e}")
+        return []
 
 def is_license_already_used(license_key, current_user_id):
     """Lisansın başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol et"""
     try:
-        if os.path.exists("user_licenses"):
-            for filename in os.listdir("user_licenses"):
-                if filename.endswith(".json"):
-                    user_id = filename.replace(".json", "")
+        # Railway persistent storage dizini
+        storage_dir = "/tmp/persistent_storage"
+        
+        if not os.path.exists(storage_dir):
+            return False
+        
+        for filename in os.listdir(storage_dir):
+            if filename.startswith("user_") and filename.endswith(".json"):
+                try:
+                    with open(f"{storage_dir}/{filename}", 'r') as f:
+                        user_license = json.load(f)
+                    
+                    user_id = user_license.get('user_id')
                     if str(user_id) != str(current_user_id):  # Kendisi değilse
-                        try:
-                            with open(f"user_licenses/{filename}", 'r') as f:
-                                user_data = json.load(f)
-                                if 'license_key' in user_data and user_data['license_key'] == license_key:
-                                    return True  # Lisans başka bir kullanıcı tarafından kullanılıyor
-                        except:
-                            continue
+                        if 'license_key' in user_license and user_license['license_key'] == license_key:
+                            return True  # Lisans başka bir kullanıcı tarafından kullanılıyor
+                except:
+                    continue
         
         return False  # Lisans kullanılmıyor
+        
     except Exception as e:
-        print(f"Lisans kontrol hatası: {e}")
-        return False  # Hata varsa kullanılabilir
+        print(f"Lisans kullanım kontrolü hatası: {e}")
+        return False
 
 def perform_simple_test():
     """Basit test fonksiyonu"""
@@ -604,7 +656,7 @@ def perform_simple_test():
         return None
 
 def perform_scan():
-    """botanlik2.py ile gerçek analiz"""
+    """botanlik.py ile gerçek analiz"""
     try:
         import time
         import traceback
@@ -612,18 +664,18 @@ def perform_scan():
         # Tarama başlangıç zamanı
         start_time = time.time()
         
-        print("🔍 botanlik2.py ile gerçek analiz başlatılıyor...")
+        print("🔍 botanlik.py ile gerçek analiz başlatılıyor...")
         
         try:
-            # botanlik2.py'den get_scan_results fonksiyonunu import et
-            from botanlik2 import get_scan_results
-            print("✅ botanlik2.py import başarılı")
+            # botanlik.py'den get_scan_results fonksiyonunu import et
+            from botanlik import get_scan_results
+            print("✅ botanlik.py import başarılı")
         except Exception as import_error:
             print(f"❌ Import hatası: {import_error}")
             print(f"🔍 Traceback: {traceback.format_exc()}")
             return None
         
-        # botanlik2.py'nin get_scan_results fonksiyonunu çağır
+        # botanlik.py'nin get_scan_results fonksiyonunu çağır
         scan_results = get_scan_results()
         
         if scan_results:
