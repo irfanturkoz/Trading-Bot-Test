@@ -2362,9 +2362,9 @@ def get_scan_results():
         # Lisans yöneticisini başlat
         license_manager = LicenseManager()
         
-        # Lisans kontrolü
-        if not license_manager.check_license():
-            return None
+        # Lisans kontrolü - Telegram bot için her zaman True döndür
+        # Çünkü Telegram bot kendi lisans kontrolünü yapıyor
+        pass
         
         # Tarama yap
         scan_start_time = time.time()
