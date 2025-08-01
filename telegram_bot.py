@@ -197,6 +197,12 @@ def start_scan_async(message):
     """Asenkron tarama işlemi"""
     user_id = message.from_user.id
     
+    # 3 saat kontrolü
+    if not can_user_scan(user_id):
+        remaining_time = get_remaining_scan_time(user_id)
+        bot.reply_to(message, f"⏰ **Tarama için bekleyin!**\n\n⏱️ **Kalan süre: {remaining_time}**\n\n🔄 **3 saatte bir tarama yapabilirsiniz.**", parse_mode='Markdown')
+        return
+    
     # Tarama başladı mesajı
     bot.reply_to(message, "🚀 **TARAMA BAŞLATILIYOR**\n\n⏱️ **Yaklaşık 2-3 dakika içerisinde uygun işlemler gösterilecek...**", parse_mode='Markdown')
     
