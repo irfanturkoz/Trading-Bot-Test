@@ -830,16 +830,37 @@ def main():
         except:
             pass
         
+        # Conflict kontrolü - önceki instance'ları temizle
+        try:
+            bot.get_me()
+            print("✅ Bot bağlantısı başarılı")
+        except Exception as e:
+            if "Conflict" in str(e):
+                print("⚠️ Bot çakışması tespit edildi! 30 saniye bekleniyor...")
+                time.sleep(30)
+                try:
+                    bot.remove_webhook()
+                    time.sleep(5)
+                except:
+                    pass
+        
         # Bot'u başlat
-        bot.polling(none_stop=True, timeout=60)
+        bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
     except KeyboardInterrupt:
         print("\n👋 Bot durduruldu.")
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         if "Conflict" in str(e):
-            print("⚠️ Conflict hatası! 10 saniye bekleniyor...")
-            time.sleep(10)
-            main()  # Tekrar dene
+            print("⚠️ Conflict hatası! Bot yeniden başlatılıyor...")
+            time.sleep(30)
+            try:
+                bot.remove_webhook()
+                time.sleep(5)
+                main()  # Tekrar dene
+            except:
+                print("❌ Bot yeniden başlatılamadı!")
+        else:
+            print(f"❌ Beklenmeyen hata: {e}")
 
 # Bot'u başlat
 if __name__ == "__main__":

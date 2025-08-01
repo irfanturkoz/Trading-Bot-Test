@@ -26,6 +26,9 @@ def run_bot():
         os.environ['TELEGRAM_BOT_TOKEN'] = bot_token
         os.environ['ADMIN_CHAT_ID'] = admin_chat_id
         
+        # Conflict kontrolü için bekle
+        time.sleep(5)
+        
         # telegram_bot.py'yi import et ve main() fonksiyonunu çalıştır
         import telegram_bot
         telegram_bot.main()
