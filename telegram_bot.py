@@ -7,7 +7,10 @@ import threading
 import time
 import concurrent.futures
 from license_manager import LicenseManager
-from config import TELEGRAM_BOT_TOKEN, ADMIN_CHAT_ID
+
+# Environment variables'dan direkt al
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 # Bot başlat
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
