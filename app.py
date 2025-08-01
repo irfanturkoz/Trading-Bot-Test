@@ -22,6 +22,10 @@ def run_bot():
         print(f"📱 Bot Token: {bot_token[:20]}...")
         print(f"👤 Admin ID: {admin_chat_id}")
         
+        # Environment variables'ları set et
+        os.environ['TELEGRAM_BOT_TOKEN'] = bot_token
+        os.environ['ADMIN_CHAT_ID'] = admin_chat_id
+        
         # telegram_bot.py dosyasını çalıştır
         exec(open("telegram_bot.py").read())
     except Exception as e:
@@ -381,9 +385,10 @@ def create_license():
 
 if __name__ == '__main__':
     print("🚀 Admin Panel başlatılıyor...")
-    print("🌐 Admin Panel: http://localhost:5000/admin")
-    print("🔐 Şifre: admin123")
     
     # Railway için port ayarları
     port = int(os.environ.get('PORT', 5000))
+    print(f"🌐 Admin Panel: http://0.0.0.0:{port}/admin")
+    print("🔐 Şifre: admin123")
+    
     app.run(host='0.0.0.0', port=port, debug=False) 
