@@ -26,8 +26,9 @@ def run_bot():
         os.environ['TELEGRAM_BOT_TOKEN'] = bot_token
         os.environ['ADMIN_CHAT_ID'] = admin_chat_id
         
-        # telegram_bot.py dosyasını çalıştır
-        exec(open("telegram_bot.py").read())
+        # telegram_bot.py'yi import et ve main() fonksiyonunu çalıştır
+        import telegram_bot
+        telegram_bot.main()
     except Exception as e:
         print(f"❌ Bot başlatma hatası: {e}")
         print("⚠️ Bot hatası olsa bile admin panel çalışmaya devam edecek")

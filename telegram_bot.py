@@ -811,7 +811,7 @@ def send_scan_results_to_user(user_id, results):
 def main():
     """Bot'u başlat"""
     print("🤖 Telegram Bot Başlatılıyor...")
-    print(f"📱 Bot: @apfel_trading3_bot")
+    print(f"📱 Bot: @apfel_trading_bot")
     print(f"🔑 Token: {TELEGRAM_BOT_TOKEN[:20]}...")
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
     print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
