@@ -465,17 +465,17 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
         current_risk = (entry_price - current_sl) / entry_price
         current_rr = current_reward / current_risk if current_risk > 0 else 0
         
-        # R/R < 0.5 ise optimize et, maksimum 3.0 olsun
-        if current_rr < 0.5:
-            # TP seçenekleri (Fibonacci seviyeleri)
+        # R/R < 1.0 ise optimize et, maksimum 2.5 olsun
+        if current_rr < 1.0:
+            # TP seçenekleri (Fibonacci seviyeleri) - daha yakın
             tp_options = []
-            for level in ['0.236', '0.382', '0.5', '0.618']:
+            for level in ['0.382', '0.5', '0.618']:
                 if level in fibo_levels and fibo_levels[level] > entry_price:
                     tp_options.append((level, fibo_levels[level]))
             
             # SL seçenekleri (daha sıkı)
             sl_options = []
-            for level in ['0.786', '0.618', '0.5']:
+            for level in ['0.618', '0.5']:
                 if level in fibo_levels and fibo_levels[level] < entry_price:
                     sl_options.append((level, fibo_levels[level]))
             
@@ -499,19 +499,19 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
                     risk = (entry_price - sl_price) / entry_price
                     rr = reward / risk if risk > 0 else 0
                     
-                    # R/R 0.5-3.0 arası olsun
-                    if 0.5 <= rr <= 3.0 and rr > best_rr:
+                    # R/R 1.0-2.5 arası olsun (daha gerçekçi)
+                    if 1.0 <= rr <= 2.5 and rr > best_rr:
                         best_tp = tp_price
                         best_sl = sl_price
                         best_rr = rr
             
             return best_tp, best_sl, best_rr
         else:
-            # Mevcut R/R'yi kontrol et, 3.0'dan büyükse sınırla
-            if current_rr > 3.0:
+            # Mevcut R/R'yi kontrol et, 2.5'dan büyükse sınırla
+            if current_rr > 2.5:
                 # TP'yi düşür
-                new_tp = entry_price + (entry_price - current_sl) * 3.0
-                return new_tp, current_sl, 3.0
+                new_tp = entry_price + (entry_price - current_sl) * 2.5
+                return new_tp, current_sl, 2.5
             return current_tp, current_sl, current_rr
     
     else:  # Short
@@ -524,17 +524,17 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
         current_risk = (current_sl - entry_price) / entry_price
         current_rr = current_reward / current_risk if current_risk > 0 else 0
         
-        # R/R < 0.5 ise optimize et, maksimum 3.0 olsun
-        if current_rr < 0.5:
-            # TP seçenekleri (Fibonacci seviyeleri)
+        # R/R < 1.0 ise optimize et, maksimum 2.5 olsun
+        if current_rr < 1.0:
+            # TP seçenekleri (Fibonacci seviyeleri) - daha yakın
             tp_options = []
-            for level in ['0.618', '0.5', '0.382', '0.236']:
+            for level in ['0.618', '0.5', '0.382']:
                 if level in fibo_levels and fibo_levels[level] < entry_price:
                     tp_options.append((level, fibo_levels[level]))
             
             # SL seçenekleri (daha sıkı)
             sl_options = []
-            for level in ['0.236', '0.382', '0.5']:
+            for level in ['0.382', '0.5']:
                 if level in fibo_levels and fibo_levels[level] > entry_price:
                     sl_options.append((level, fibo_levels[level]))
             
@@ -558,19 +558,19 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
                     risk = (sl_price - entry_price) / entry_price
                     rr = reward / risk if risk > 0 else 0
                     
-                    # R/R 0.5-3.0 arası olsun
-                    if 0.5 <= rr <= 3.0 and rr > best_rr:
+                    # R/R 1.0-2.5 arası olsun (daha gerçekçi)
+                    if 1.0 <= rr <= 2.5 and rr > best_rr:
                         best_tp = tp_price
                         best_sl = sl_price
                         best_rr = rr
             
             return best_tp, best_sl, best_rr
         else:
-            # Mevcut R/R'yi kontrol et, 3.0'dan büyükse sınırla
-            if current_rr > 3.0:
+            # Mevcut R/R'yi kontrol et, 2.5'dan büyükse sınırla
+            if current_rr > 2.5:
                 # TP'yi yükselt
-                new_tp = entry_price - (current_sl - entry_price) * 3.0
-                return new_tp, current_sl, 3.0
+                new_tp = entry_price - (current_sl - entry_price) * 2.5
+                return new_tp, current_sl, 2.5
             return current_tp, current_sl, current_rr
 
 
