@@ -192,25 +192,25 @@ def calculate_signal_score(df, formation_type, formation_data, macd_data, bb_dat
     max_score = 100
     signals = []
     
-    # 1. Formasyon Ağırlığı (40 puan)
+    # 1. Formasyon Ağırlığı (35 puan) - Daha dengeli
     if formation_type == 'TOBO':
-        formation_score = 40
+        formation_score = 35
         signals.append(f"TOBO Formasyonu: +{formation_score}")
     elif formation_type == 'OBO':
-        formation_score = 40
+        formation_score = 35
         signals.append(f"OBO Formasyonu: +{formation_score}")
     else:
         formation_score = 0
     
     total_score += formation_score
     
-    # 2. MA Trend Ağırlığı (20 puan)
+    # 2. MA Trend Ağırlığı (15 puan) - Daha düşük ağırlık
     if 'Yükseliş' in ma_trend:
-        ma_score = 20
+        ma_score = 15
         ma_signal = 'Long'
         signals.append(f"MA Trend (Yükseliş): +{ma_score}")
     elif 'Düşüş' in ma_trend:
-        ma_score = 20
+        ma_score = 15
         ma_signal = 'Short'
         signals.append(f"MA Trend (Düşüş): +{ma_score}")
     else:
@@ -307,27 +307,27 @@ def calculate_signal_score(df, formation_type, formation_data, macd_data, bb_dat
     long_percentage = (long_signals / total_indicators) * 100
     short_percentage = (short_signals / total_indicators) * 100
     
-    # Final sinyal belirleme
-    if long_percentage >= 70:
+    # Final sinyal belirleme - Daha sıkı kriterler
+    if long_percentage >= 75:
         final_signal = 'Long'
         confidence = 'Yüksek'
-    elif short_percentage >= 70:
+    elif short_percentage >= 75:
         final_signal = 'Short'
         confidence = 'Yüksek'
-    elif long_percentage >= 60:
+    elif long_percentage >= 65:
         final_signal = 'Long'
         confidence = 'Orta'
-    elif short_percentage >= 60:
+    elif short_percentage >= 65:
         final_signal = 'Short'
         confidence = 'Orta'
     else:
         final_signal = 'Bekleme'
         confidence = 'Düşük'
     
-    # Çelişki durumu
-    if abs(long_percentage - short_percentage) < 20:
+    # Çelişki durumu - Daha hassas
+    if abs(long_percentage - short_percentage) < 15:
         conflict = 'Yüksek Çelişki'
-    elif abs(long_percentage - short_percentage) < 40:
+    elif abs(long_percentage - short_percentage) < 30:
         conflict = 'Orta Çelişki'
     else:
         conflict = 'Düşük Çelişki'
