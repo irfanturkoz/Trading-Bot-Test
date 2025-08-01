@@ -450,7 +450,7 @@ def calculate_three_tp_levels(entry_price, current_tp, current_sl, direction, fi
 
 def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
     """
-    TP ve SL seviyelerini optimize eder - R/R oranını en az 1.5 yapar
+    TP ve SL seviyelerini optimize eder - Gerçekçi R/R oranları (0.5-3.0 arası)
     """
     if direction == 'Long':
         # Mantık kontrolü: Long için entry > SL ve TP > entry olmalı
@@ -462,8 +462,8 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
         current_risk = (entry_price - current_sl) / entry_price
         current_rr = current_reward / current_risk if current_risk > 0 else 0
         
-        # R/R < 1.5 ise optimize et
-        if current_rr < 1.5:
+        # R/R < 0.5 ise optimize et, maksimum 3.0 olsun
+        if current_rr < 0.5:
             # TP seçenekleri (Fibonacci seviyeleri)
             tp_options = []
             for level in ['0.236', '0.382', '0.5', '0.618']:
@@ -487,22 +487,28 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
             # En iyi kombinasyonu bul
             for tp_level, tp_price in tp_options:
                 for sl_level, sl_price in sl_options:
-                    # Minimum SL mesafesi kontrolü (%3'ten az olmasın)
+                    # Minimum SL mesafesi kontrolü (%2'den az olmasın)
                     sl_distance = (entry_price - sl_price) / entry_price
-                    if sl_distance < 0.03:  # %3'ten az mesafe güvenli değil
+                    if sl_distance < 0.02:  # %2'den az mesafe güvenli değil
                         continue
                     
                     reward = (tp_price - entry_price) / entry_price
                     risk = (entry_price - sl_price) / entry_price
                     rr = reward / risk if risk > 0 else 0
                     
-                    if rr >= 1.5 and rr > best_rr:
+                    # R/R 0.5-3.0 arası olsun
+                    if 0.5 <= rr <= 3.0 and rr > best_rr:
                         best_tp = tp_price
                         best_sl = sl_price
                         best_rr = rr
             
             return best_tp, best_sl, best_rr
         else:
+            # Mevcut R/R'yi kontrol et, 3.0'dan büyükse sınırla
+            if current_rr > 3.0:
+                # TP'yi düşür
+                new_tp = entry_price + (entry_price - current_sl) * 3.0
+                return new_tp, current_sl, 3.0
             return current_tp, current_sl, current_rr
     
     else:  # Short
@@ -515,8 +521,8 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
         current_risk = (current_sl - entry_price) / entry_price
         current_rr = current_reward / current_risk if current_risk > 0 else 0
         
-        # R/R < 1.5 ise optimize et
-        if current_rr < 1.5:
+        # R/R < 0.5 ise optimize et, maksimum 3.0 olsun
+        if current_rr < 0.5:
             # TP seçenekleri (Fibonacci seviyeleri)
             tp_options = []
             for level in ['0.618', '0.5', '0.382', '0.236']:
@@ -540,22 +546,28 @@ def optimize_tp_sl(entry_price, current_tp, current_sl, direction, fibo_levels, 
             # En iyi kombinasyonu bul
             for tp_level, tp_price in tp_options:
                 for sl_level, sl_price in sl_options:
-                    # Minimum SL mesafesi kontrolü (%3'ten az olmasın)
+                    # Minimum SL mesafesi kontrolü (%2'den az olmasın)
                     sl_distance = (sl_price - entry_price) / entry_price
-                    if sl_distance < 0.03:  # %3'ten az mesafe güvenli değil
+                    if sl_distance < 0.02:  # %2'den az mesafe güvenli değil
                         continue
                     
                     reward = (entry_price - tp_price) / entry_price
                     risk = (sl_price - entry_price) / entry_price
                     rr = reward / risk if risk > 0 else 0
                     
-                    if rr >= 1.5 and rr > best_rr:
+                    # R/R 0.5-3.0 arası olsun
+                    if 0.5 <= rr <= 3.0 and rr > best_rr:
                         best_tp = tp_price
                         best_sl = sl_price
                         best_rr = rr
             
             return best_tp, best_sl, best_rr
         else:
+            # Mevcut R/R'yi kontrol et, 3.0'dan büyükse sınırla
+            if current_rr > 3.0:
+                # TP'yi yükselt
+                new_tp = entry_price - (current_sl - entry_price) * 3.0
+                return new_tp, current_sl, 3.0
             return current_tp, current_sl, current_rr
 
 
@@ -1983,6 +1995,59 @@ def find_broadening_formation(df, min_touches=3, min_height_ratio=0.02, max_heig
                     'current_price': current_price
                 }
     except Exception as e:
+        return None
+
+def get_scan_results():
+    """Tarama sonuçlarını döndür (Telegram bot için)"""
+    try:
+        # Tarama yap
+        scan_start_time = time.time()
+        symbols = get_usdt_symbols()
+        firsatlar = []
+        
+        # Tüm coinleri gerçekten analiz et - 80-90 saniye sürecek
+        print(f"🔍 {len(symbols)} coin analiz ediliyor... (80-90 saniye sürecek)")
+        
+        # Sıralı analiz - daha sağlıklı ve gerçekçi
+        print("🔍 Sıralı analiz başlatılıyor... (80-90 saniye sürecek)")
+        
+        completed = 0
+        for symbol in symbols:
+            try:
+                result = analyze_symbol(symbol, '4h')
+                completed += 1
+                
+                # İlerleme göster
+                if completed % 20 == 0:
+                    progress = (completed / len(symbols)) * 100
+                    print(f"📊 İlerleme: %{progress:.1f} ({completed}/{len(symbols)})")
+                
+                if result:
+                    firsatlar.append(result)
+                    print(f"✅ {symbol}: {result['formasyon']} - R/R: {result.get('rr_ratio', 0):.2f}")
+                
+                # Her 10 coin'de bir kısa bekleme (API limitlerini aşmamak için)
+                if completed % 10 == 0:
+                    time.sleep(0.5)
+                    
+            except Exception as e:
+                print(f"❌ {symbol} analiz hatası: {e}")
+                completed += 1
+                continue
+        
+        # En iyi 10 fırsatı sırala
+        all_firsatlar = sorted(firsatlar, key=lambda x: x.get('tpfark', 0), reverse=True)[:10]
+        
+        # Tarama süresini hesapla
+        scan_time = time.time() - scan_start_time
+        
+        return {
+            'total_scanned': len(symbols),
+            'opportunities': all_firsatlar,
+            'scan_time': scan_time
+        }
+    except Exception as e:
+        print(f"Tarama hatası: {e}")
         return None
 
 if __name__ == "__main__":

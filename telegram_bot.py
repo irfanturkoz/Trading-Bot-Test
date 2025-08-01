@@ -604,7 +604,7 @@ def perform_simple_test():
         return None
 
 def perform_scan():
-    """botanlik.py ile gerçek analiz"""
+    """botanlik2.py ile gerçek analiz"""
     try:
         import time
         import traceback
@@ -612,18 +612,18 @@ def perform_scan():
         # Tarama başlangıç zamanı
         start_time = time.time()
         
-        print("🔍 botanlik.py ile gerçek analiz başlatılıyor...")
+        print("🔍 botanlik2.py ile gerçek analiz başlatılıyor...")
         
         try:
-            # botanlik.py'den get_scan_results fonksiyonunu import et
-            from botanlik import get_scan_results
-            print("✅ botanlik.py import başarılı")
+            # botanlik2.py'den get_scan_results fonksiyonunu import et
+            from botanlik2 import get_scan_results
+            print("✅ botanlik2.py import başarılı")
         except Exception as import_error:
             print(f"❌ Import hatası: {import_error}")
             print(f"🔍 Traceback: {traceback.format_exc()}")
             return None
         
-        # botanlik.py'nin get_scan_results fonksiyonunu çağır
+        # botanlik2.py'nin get_scan_results fonksiyonunu çağır
         scan_results = get_scan_results()
         
         if scan_results:
