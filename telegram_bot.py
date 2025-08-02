@@ -6,10 +6,14 @@ from datetime import datetime
 import threading
 import time
 import concurrent.futures
+from botanlik import analyze_coin
 from license_manager import LicenseManager
 
-# Environment variables'dan direkt al
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+# YENİ GÜVENLİ TOKEN - Doğrudan ayarla
+TELEGRAM_BOT_TOKEN = "8243806452:AAFH_i_CcyU0p_9lF9_9yg73OAL59tn6ab8"
+os.environ['TELEGRAM_BOT_TOKEN'] = TELEGRAM_BOT_TOKEN
+print("Guvenli token yuklendi!")
+
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 # Bot başlat

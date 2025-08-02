@@ -12,7 +12,11 @@ app = Flask(__name__)
 app.secret_key = 'admin_panel_secret_key_2024'
 
 # Environment variables kontrolü
-bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+# YENİ GÜVENLİ TOKEN - Doğrudan ayarla
+TELEGRAM_BOT_TOKEN = "8243806452:AAFH_i_CcyU0p_9lF9_9yg73OAL59tn6ab8"
+bot_token = TELEGRAM_BOT_TOKEN
+os.environ['TELEGRAM_BOT_TOKEN'] = TELEGRAM_BOT_TOKEN
+print("App: Guvenli token yuklendi!")
 admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
 
 # Bot'u ayrı thread'de çalıştır

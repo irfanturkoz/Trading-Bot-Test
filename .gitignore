@@ -1,5 +1,6 @@
 # Sensitive data
 config.py
+secure_config.py
 *.env
 .env
 .env.local
