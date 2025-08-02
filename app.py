@@ -6,18 +6,46 @@ import random
 import string
 import hashlib
 import time
+from dotenv import load_dotenv
+
+# .env dosyasını yükle
+load_dotenv()
 
 # Flask app oluştur
 app = Flask(__name__)
 app.secret_key = 'admin_panel_secret_key_2024'
 
 # Environment variables kontrolü
-# YENİ GÜVENLİ TOKEN - Doğrudan ayarla
-TELEGRAM_BOT_TOKEN = "8243806452:AAFH_i_CcyU0p_9lF9_9yg73OAL59tn6ab8"
-bot_token = TELEGRAM_BOT_TOKEN
-os.environ['TELEGRAM_BOT_TOKEN'] = TELEGRAM_BOT_TOKEN
-print("App: Guvenli token yuklendi!")
+bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+if not bot_token:
+    print("⚠️ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
+    bot_token = None
+else:
+    print("✅ Bot token environment variable'dan yüklendi")
 admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
+
+def test_bot_token():
+    """Bot token'ının geçerli olup olmadığını test eder"""
+    try:
+        import requests
+        url = f"https://api.telegram.org/bot{bot_token}/getMe"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('ok'):
+                print(f"✅ Bot token geçerli: {data['result']['first_name']}")
+                return True
+            else:
+                print(f"❌ Bot token geçersiz: {data.get('description', 'Unknown error')}")
+                return False
+        else:
+            print(f"❌ Bot token test hatası: HTTP {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Bot token test hatası: {e}")
+        return False
 
 # Bot'u ayrı thread'de çalıştır
 def run_bot():
@@ -34,21 +62,43 @@ def run_bot():
         time.sleep(5)
         
         # telegram_bot.py'yi import et ve main() fonksiyonunu çalıştır
-        import telegram_bot
-        telegram_bot.main()
+        try:
+            import telegram_bot
+            telegram_bot.main()
+        except ImportError as import_error:
+            print(f"❌ Import hatası: {import_error}")
+            print("🔧 botanlik.py dosyasındaki fonksiyonlar kontrol ediliyor...")
+            
+            # botanlik.py'den gerekli fonksiyonları kontrol et
+            try:
+                from botanlik import get_scan_results
+                print("✅ botanlik.py import başarılı")
+            except ImportError as botanlik_error:
+                print(f"❌ botanlik.py import hatası: {botanlik_error}")
+                print("⚠️ Bot başlatılamıyor, admin panel çalışmaya devam edecek")
+                return
+        except Exception as bot_error:
+            print(f"❌ Bot çalıştırma hatası: {bot_error}")
+            print("⚠️ Bot hatası olsa bile admin panel çalışmaya devam edecek")
     except Exception as e:
         print(f"❌ Bot başlatma hatası: {e}")
         print("⚠️ Bot hatası olsa bile admin panel çalışmaya devam edecek")
 
 # Bot thread'ini başlat
 if bot_token:
-    try:
-        bot_thread = threading.Thread(target=run_bot, daemon=True)
-        bot_thread.start()
-        print("✅ Bot thread başlatıldı")
-    except Exception as e:
-        print(f"⚠️ Bot thread başlatılamadı: {e}")
-        print("⚠️ Admin panel çalışmaya devam edecek")
+    # Önce bot token'ını test et
+    print("🔍 Bot token test ediliyor...")
+    if test_bot_token():
+        try:
+            bot_thread = threading.Thread(target=run_bot, daemon=True)
+            bot_thread.start()
+            print("✅ Bot thread başlatıldı")
+        except Exception as e:
+            print(f"⚠️ Bot thread başlatılamadı: {e}")
+            print("⚠️ Admin panel çalışmaya devam edecek")
+    else:
+        print("⚠️ Bot token geçersiz, sadece admin panel çalışacak")
+        print("💡 Yeni bir bot token almanız gerekebilir")
 else:
     print("⚠️ Bot token bulunamadı, sadece admin panel çalışacak")
 
@@ -1044,8 +1094,17 @@ def send_broadcast():
     
     try:
         # Bot'a broadcast gönderme isteği
-        import telegram_bot
-        if hasattr(telegram_bot, 'bot') and telegram_bot.bot:
+        try:
+            import telegram_bot
+            bot_available = hasattr(telegram_bot, 'bot') and telegram_bot.bot
+        except ImportError as import_error:
+            print(f"❌ telegram_bot import hatası: {import_error}")
+            bot_available = False
+        except Exception as bot_error:
+            print(f"❌ Bot erişim hatası: {bot_error}")
+            bot_available = False
+        
+        if bot_available:
             # Tüm aktif kullanıcıları bul
             storage_dir = "/tmp/persistent_storage"
             if os.path.exists(storage_dir):
@@ -1086,9 +1145,13 @@ def send_broadcast():
 """
                                     
                                     # Mesajı gönder
-                                    telegram_bot.bot.send_message(user_id, formatted_message, parse_mode='Markdown')
-                                    sent_count += 1
-                                    print(f"✅ Bildirim gönderildi: {user_id}")
+                                    try:
+                                        telegram_bot.bot.send_message(user_id, formatted_message, parse_mode='Markdown')
+                                        sent_count += 1
+                                        print(f"✅ Bildirim gönderildi: {user_id}")
+                                    except Exception as send_error:
+                                        failed_count += 1
+                                        print(f"❌ Mesaj gönderme hatası: {user_id} - {send_error}")
                                     
                                     # Rate limiting - Telegram API limitlerini aşmamak için
                                     time.sleep(0.1)
@@ -1115,7 +1178,7 @@ def send_broadcast():
             else:
                 session['error'] = '❌ Aktif kullanıcı bulunamadı!'
         else:
-            session['error'] = '❌ Bot bağlantısı kurulamadı!'
+            session['error'] = '❌ Bot bağlantısı kurulamadı! Bot token geçersiz olabilir.'
     except Exception as e:
         print(f"Broadcast hatası: {e}")
         session['error'] = f'❌ Bildirim gönderme hatası: {e}'

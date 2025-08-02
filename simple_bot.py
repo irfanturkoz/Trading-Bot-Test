@@ -3,9 +3,19 @@ from telebot import types
 import json
 import os
 from datetime import datetime
+from dotenv import load_dotenv
 
-# Bot token'ı
-BOT_TOKEN = "8226593755:AAFF4SubMxwkaAzZbGZvGcFqYeYBScSKlSA"
+# .env dosyasını yükle
+load_dotenv()
+
+# Bot token'ını environment variable'dan al
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+if not BOT_TOKEN:
+    print("❌ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
+    raise ValueError("Bot token bulunamadı!")
+
+print("✅ Simple bot: Token environment variable'dan yüklendi")
 
 # Bot başlat
 bot = telebot.TeleBot(BOT_TOKEN)

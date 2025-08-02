@@ -6,13 +6,21 @@ from datetime import datetime
 import threading
 import time
 import concurrent.futures
-from botanlik import analyze_coin
+from botanlik import get_scan_results
 from license_manager import LicenseManager
+from dotenv import load_dotenv
 
-# YENİ GÜVENLİ TOKEN - Doğrudan ayarla
-TELEGRAM_BOT_TOKEN = "8243806452:AAFH_i_CcyU0p_9lF9_9yg73OAL59tn6ab8"
-os.environ['TELEGRAM_BOT_TOKEN'] = TELEGRAM_BOT_TOKEN
-print("Guvenli token yuklendi!")
+# .env dosyasını yükle
+load_dotenv()
+
+# Bot token'ını environment variable'dan al
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+if not TELEGRAM_BOT_TOKEN:
+    print("❌ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
+    raise ValueError("Bot token bulunamadı!")
+
+print("✅ Bot token environment variable'dan yüklendi")
 
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
