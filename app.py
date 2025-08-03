@@ -89,9 +89,19 @@ def run_bot():
         print("=" * 40)
         
         # Environment variables'ları set et
-        os.environ['TELEGRAM_BOT_KEY'] = bot_token
+        os.environ['TELEGRAM_BOT_TOKEN'] = bot_token
         os.environ['ADMIN_CHAT_ID'] = admin_chat_id
         print("✅ Environment variables set edildi")
+        print(f"🔍 Set edilen TELEGRAM_BOT_TOKEN: {bot_token[:20]}...")
+        print(f"🔍 Set edilen ADMIN_CHAT_ID: {admin_chat_id}")
+        
+        # Bot token test et
+        print("🔍 Bot token test ediliyor...")
+        if test_bot_token():
+            print("✅ Bot token geçerli!")
+        else:
+            print("❌ Bot token geçersiz!")
+            print("⚠️ Bot çalışmayacak, sadece admin panel aktif olacak")
         
         # Conflict kontrolü için bekle
         print("⏳ 5 saniye bekleniyor...")

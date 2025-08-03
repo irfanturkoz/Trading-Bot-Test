@@ -881,6 +881,7 @@ def main():
     print(f"📱 Bot: @apfel_trading_bot")
     print(f"🔑 Token: {TELEGRAM_BOT_TOKEN[:20]}...")
     print(f"🔍 Token uzunluğu: {len(TELEGRAM_BOT_TOKEN)}")
+    print(f"🔍 Token son 10 karakteri: ...{TELEGRAM_BOT_TOKEN[-10:]}")
     print(f"👤 Admin ID: {ADMIN_CHAT_ID}")
     print("=" * 50)
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
