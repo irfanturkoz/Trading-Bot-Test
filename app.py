@@ -17,16 +17,24 @@ app = Flask(__name__)
 app.secret_key = 'admin_panel_secret_key_2024'
 
 # Environment variables kontrolü
+print("🔍 Environment variables kontrol ediliyor...")
+print(f"🔍 Tüm environment variables: {dict(os.environ)}")
+
 bot_token = os.getenv('TELEGRAM_BOT_KEY')
+print(f"🔍 TELEGRAM_BOT_KEY değeri: {bot_token}")
+
 if not bot_token:
     print("⚠️ TELEGRAM_BOT_KEY environment variable bulunamadı!")
     print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_KEY ekleyin")
+    print("💡 Railway'de Variables sekmesinden TELEGRAM_BOT_KEY ekleyin")
     bot_token = None
 else:
     print("✅ Bot token environment variable'dan yüklendi")
     print(f"🔍 Debug: Token başlangıcı: {bot_token[:20]}...")
     print(f"🔍 Debug: Token uzunluğu: {len(bot_token)}")
+
 admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
+print(f"🔍 ADMIN_CHAT_ID değeri: {admin_chat_id}")
 
 # ADMIN_CHAT_ID kontrolü
 if not admin_chat_id:
