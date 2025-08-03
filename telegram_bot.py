@@ -21,6 +21,8 @@ if not TELEGRAM_BOT_TOKEN:
     raise ValueError("Bot token bulunamadı!")
 
 print("✅ Bot token environment variable'dan yüklendi")
+print(f"🔍 Debug: Token başlangıcı: {TELEGRAM_BOT_TOKEN[:20]}...")
+print(f"🔍 Debug: Token uzunluğu: {len(TELEGRAM_BOT_TOKEN)}")
 
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 

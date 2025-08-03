@@ -7,6 +7,7 @@ import string
 import hashlib
 import time
 from dotenv import load_dotenv
+from datetime import datetime
 
 # .env dosyasını yükle
 load_dotenv()
@@ -23,6 +24,8 @@ if not bot_token:
     bot_token = None
 else:
     print("✅ Bot token environment variable'dan yüklendi")
+    print(f"🔍 Debug: Token başlangıcı: {bot_token[:20]}...")
+    print(f"🔍 Debug: Token uzunluğu: {len(bot_token)}")
 admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
 
 # ADMIN_CHAT_ID kontrolü
