@@ -16,20 +16,23 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'admin_panel_secret_key_2024'
 
-# Environment variables kontrolü
+# Environment variables'ları yükle
 print("🔍 Environment variables kontrol ediliyor...")
 print("=" * 60)
+
+# Tüm environment variables'ları listele
+all_env_vars = dict(os.environ)
 print("🔍 Tüm environment variables:")
-for key, value in os.environ.items():
-    if 'TELEGRAM' in key or 'ADMIN' in key or 'BOT' in key:
+for key, value in all_env_vars.items():
+    if 'RAILWAY' in key or 'TELEGRAM' in key or 'ADMIN' in key:
         print(f"  {key}: {value}")
     else:
         print(f"  {key}: [gizli]")
+
 print("=" * 60)
 
+# Bot token'ını al
 bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-print(f"🔍 TELEGRAM_BOT_TOKEN değeri: {bot_token}")
-
 if not bot_token:
     print("⚠️ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
     print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
@@ -41,14 +44,12 @@ else:
     print(f"🔍 Debug: Token uzunluğu: {len(bot_token)}")
     print(f"🔍 Debug: Token son 10 karakteri: ...{bot_token[-10:]}")
 
-admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
-print(f"🔍 ADMIN_CHAT_ID değeri: {admin_chat_id}")
-
-# ADMIN_CHAT_ID kontrolü
+# Admin chat ID'yi al
+admin_chat_id = os.getenv('ADMIN_CHAT_ID')
 if not admin_chat_id:
     print("⚠️ ADMIN_CHAT_ID environment variable bulunamadı!")
     print("💡 .env dosyasına ADMIN_CHAT_ID ekleyin")
-    admin_chat_id = "123456789"  # Varsayılan değer
+    admin_chat_id = "7977984015"  # Varsayılan değer
     print(f"🔧 Varsayılan ADMIN_CHAT_ID kullanılıyor: {admin_chat_id}")
 else:
     print(f"✅ ADMIN_CHAT_ID yüklendi: {admin_chat_id}")
@@ -113,6 +114,19 @@ def run_bot():
             import telegram_bot
             print("✅ telegram_bot.py import başarılı")
             print("🚀 Bot main() fonksiyonu çağrılıyor...")
+            
+            # Bot'un çalışıp çalışmadığını kontrol et
+            print("🔍 Bot durumu kontrol ediliyor...")
+            if hasattr(telegram_bot, 'bot'):
+                print("✅ Bot objesi mevcut")
+                try:
+                    bot_info = telegram_bot.bot.get_me()
+                    print(f"✅ Bot bilgileri: @{bot_info.username}")
+                except Exception as bot_info_error:
+                    print(f"❌ Bot bilgileri alınamadı: {bot_info_error}")
+            else:
+                print("❌ Bot objesi bulunamadı")
+            
             telegram_bot.main()
         except ImportError as import_error:
             print(f"❌ Import hatası: {import_error}")
