@@ -888,22 +888,22 @@ def main():
     print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
     
     # Conflict çözümü için daha güçlü yaklaşım
-    max_retries = 3
+    max_retries = 5
     retry_count = 0
     
     while retry_count < max_retries:
         try:
             print(f"🔄 Deneme {retry_count + 1}/{max_retries}")
             
-            # Webhook'u temizle
+            # Webhook'u temizle ve daha uzun bekle
             try:
                 print("🧹 Webhook temizleniyor...")
                 bot.remove_webhook()
                 print("✅ Webhook temizlendi")
-                time.sleep(2)
+                time.sleep(5)  # Daha uzun bekle
             except Exception as webhook_error:
                 print(f"⚠️ Webhook temizleme hatası: {webhook_error}")
-                pass
+                time.sleep(3)
             
             # Bot bağlantısını test et
             try:
@@ -913,10 +913,10 @@ def main():
                 print(f"✅ Bot ID: {bot_info.id}")
                 print(f"✅ Bot adı: {bot_info.first_name}")
             except Exception as e:
-                if "Conflict" in str(e):
+                if "Conflict" in str(e) or "409" in str(e):
                     print(f"⚠️ Bot çakışması tespit edildi! (Deneme {retry_count + 1}/{max_retries})")
-                    print("🔄 60 saniye bekleniyor...")
-                    time.sleep(60)
+                    print("🔄 120 saniye bekleniyor...")
+                    time.sleep(120)  # Daha uzun bekle
                     retry_count += 1
                     continue
                 else:
@@ -935,15 +935,15 @@ def main():
             break
         except Exception as e:
             print(f"❌ Bot hatası: {e}")
-            if "Conflict" in str(e):
+            if "Conflict" in str(e) or "409" in str(e):
                 retry_count += 1
                 if retry_count < max_retries:
                     print(f"⚠️ Conflict hatası! Yeniden deneniyor... (Deneme {retry_count}/{max_retries})")
-                    print("🔄 60 saniye bekleniyor...")
-                    time.sleep(60)
+                    print("🔄 120 saniye bekleniyor...")
+                    time.sleep(120)  # Daha uzun bekle
                     try:
                         bot.remove_webhook()
-                        time.sleep(5)
+                        time.sleep(10)
                     except:
                         pass
                 else:

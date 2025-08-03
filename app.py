@@ -104,9 +104,9 @@ def run_bot():
             print("❌ Bot token geçersiz!")
             print("⚠️ Bot çalışmayacak, sadece admin panel aktif olacak")
         
-        # Conflict kontrolü için bekle
-        print("⏳ 5 saniye bekleniyor...")
-        time.sleep(5)
+        # Conflict kontrolü için daha uzun bekle
+        print("⏳ 15 saniye bekleniyor (conflict önleme)...")
+        time.sleep(15)
         
         # telegram_bot.py'yi import et ve main() fonksiyonunu çalıştır
         print("📦 telegram_bot.py import ediliyor...")
