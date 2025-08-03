@@ -14,20 +14,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Bot token'ını environment variable'dan al
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_KEY')
+print("🔍 telegram_bot.py - Environment variables kontrol ediliyor...")
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not TELEGRAM_BOT_TOKEN:
-    print("❌ TELEGRAM_BOT_KEY environment variable bulunamadı!")
-    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_KEY ekleyin")
+    print("❌ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
     raise ValueError("Bot token bulunamadı!")
 
 print("✅ Bot token environment variable'dan yüklendi")
 print(f"🔍 Debug: Token başlangıcı: {TELEGRAM_BOT_TOKEN[:20]}...")
 print(f"🔍 Debug: Token uzunluğu: {len(TELEGRAM_BOT_TOKEN)}")
+print(f"🔍 Debug: Token son 10 karakteri: ...{TELEGRAM_BOT_TOKEN[-10:]}")
 
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 # Bot başlat
+print("🤖 Telegram bot başlatılıyor...")
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+print("✅ Telegram bot başlatıldı")
 
 # ADMIN_CHAT_ID kontrolü
 if not ADMIN_CHAT_ID:
@@ -37,6 +41,10 @@ if not ADMIN_CHAT_ID:
     print(f"🔧 Varsayılan ADMIN_CHAT_ID kullanılıyor: {ADMIN_CHAT_ID}")
 else:
     print(f"✅ ADMIN_CHAT_ID yüklendi: {ADMIN_CHAT_ID}")
+
+print("=" * 40)
+print("🚀 telegram_bot.py hazır!")
+print("=" * 40)
 
 # Lisans yöneticisi
 license_manager = LicenseManager()
@@ -869,8 +877,12 @@ def send_scan_results_to_user(user_id, results):
 def main():
     """Bot'u başlat"""
     print("🤖 Telegram Bot Başlatılıyor...")
+    print("=" * 50)
     print(f"📱 Bot: @apfel_trading_bot")
     print(f"🔑 Token: {TELEGRAM_BOT_TOKEN[:20]}...")
+    print(f"🔍 Token uzunluğu: {len(TELEGRAM_BOT_TOKEN)}")
+    print(f"👤 Admin ID: {ADMIN_CHAT_ID}")
+    print("=" * 50)
     print("✅ Bot çalışıyor! Ctrl+C ile durdurun.")
     print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
     
@@ -880,18 +892,25 @@ def main():
     
     while retry_count < max_retries:
         try:
+            print(f"🔄 Deneme {retry_count + 1}/{max_retries}")
+            
             # Webhook'u temizle
             try:
+                print("🧹 Webhook temizleniyor...")
                 bot.remove_webhook()
                 print("✅ Webhook temizlendi")
                 time.sleep(2)
-            except:
+            except Exception as webhook_error:
+                print(f"⚠️ Webhook temizleme hatası: {webhook_error}")
                 pass
             
             # Bot bağlantısını test et
             try:
+                print("🔗 Bot bağlantısı test ediliyor...")
                 bot_info = bot.get_me()
                 print(f"✅ Bot bağlantısı başarılı: @{bot_info.username}")
+                print(f"✅ Bot ID: {bot_info.id}")
+                print(f"✅ Bot adı: {bot_info.first_name}")
             except Exception as e:
                 if "Conflict" in str(e):
                     print(f"⚠️ Bot çakışması tespit edildi! (Deneme {retry_count + 1}/{max_retries})")

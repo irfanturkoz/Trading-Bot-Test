@@ -18,20 +18,28 @@ app.secret_key = 'admin_panel_secret_key_2024'
 
 # Environment variables kontrolü
 print("🔍 Environment variables kontrol ediliyor...")
-print(f"🔍 Tüm environment variables: {dict(os.environ)}")
+print("=" * 60)
+print("🔍 Tüm environment variables:")
+for key, value in os.environ.items():
+    if 'TELEGRAM' in key or 'ADMIN' in key or 'BOT' in key:
+        print(f"  {key}: {value}")
+    else:
+        print(f"  {key}: [gizli]")
+print("=" * 60)
 
-bot_token = os.getenv('TELEGRAM_BOT_KEY')
-print(f"🔍 TELEGRAM_BOT_KEY değeri: {bot_token}")
+bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+print(f"🔍 TELEGRAM_BOT_TOKEN değeri: {bot_token}")
 
 if not bot_token:
-    print("⚠️ TELEGRAM_BOT_KEY environment variable bulunamadı!")
-    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_KEY ekleyin")
-    print("💡 Railway'de Variables sekmesinden TELEGRAM_BOT_KEY ekleyin")
+    print("⚠️ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
+    print("💡 Railway'de Variables sekmesinden TELEGRAM_BOT_TOKEN ekleyin")
     bot_token = None
 else:
     print("✅ Bot token environment variable'dan yüklendi")
     print(f"🔍 Debug: Token başlangıcı: {bot_token[:20]}...")
     print(f"🔍 Debug: Token uzunluğu: {len(bot_token)}")
+    print(f"🔍 Debug: Token son 10 karakteri: ...{bot_token[-10:]}")
 
 admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
 print(f"🔍 ADMIN_CHAT_ID değeri: {admin_chat_id}")
@@ -44,6 +52,9 @@ if not admin_chat_id:
     print(f"🔧 Varsayılan ADMIN_CHAT_ID kullanılıyor: {admin_chat_id}")
 else:
     print(f"✅ ADMIN_CHAT_ID yüklendi: {admin_chat_id}")
+
+print("=" * 60)
+print("🚀 Uygulama başlatılıyor...")
 
 def test_bot_token():
     """Bot token'ının geçerli olup olmadığını test eder"""
@@ -71,19 +82,27 @@ def test_bot_token():
 def run_bot():
     try:
         print("🤖 Bot başlatılıyor...")
+        print("=" * 40)
         print(f"📱 Bot Token: {bot_token[:20]}...")
         print(f"👤 Admin ID: {admin_chat_id}")
+        print(f"🔍 Token uzunluğu: {len(bot_token) if bot_token else 'None'}")
+        print("=" * 40)
         
         # Environment variables'ları set et
         os.environ['TELEGRAM_BOT_KEY'] = bot_token
         os.environ['ADMIN_CHAT_ID'] = admin_chat_id
+        print("✅ Environment variables set edildi")
         
         # Conflict kontrolü için bekle
+        print("⏳ 5 saniye bekleniyor...")
         time.sleep(5)
         
         # telegram_bot.py'yi import et ve main() fonksiyonunu çalıştır
+        print("📦 telegram_bot.py import ediliyor...")
         try:
             import telegram_bot
+            print("✅ telegram_bot.py import başarılı")
+            print("🚀 Bot main() fonksiyonu çağrılıyor...")
             telegram_bot.main()
         except ImportError as import_error:
             print(f"❌ Import hatası: {import_error}")
