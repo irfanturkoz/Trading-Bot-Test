@@ -27,6 +27,15 @@ ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 # Bot başlat
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
+# ADMIN_CHAT_ID kontrolü
+if not ADMIN_CHAT_ID:
+    print("⚠️ ADMIN_CHAT_ID environment variable bulunamadı!")
+    print("💡 .env dosyasına ADMIN_CHAT_ID ekleyin")
+    ADMIN_CHAT_ID = "123456789"  # Varsayılan değer
+    print(f"🔧 Varsayılan ADMIN_CHAT_ID kullanılıyor: {ADMIN_CHAT_ID}")
+else:
+    print(f"✅ ADMIN_CHAT_ID yüklendi: {ADMIN_CHAT_ID}")
+
 # Lisans yöneticisi
 license_manager = LicenseManager()
 

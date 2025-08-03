@@ -17,6 +17,15 @@ print("✅ Notifier: Bot token environment variable'dan yüklendi")
 
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
+# ADMIN_CHAT_ID kontrolü
+if not ADMIN_CHAT_ID:
+    print("⚠️ ADMIN_CHAT_ID environment variable bulunamadı!")
+    print("💡 .env dosyasına ADMIN_CHAT_ID ekleyin")
+    ADMIN_CHAT_ID = "123456789"  # Varsayılan değer
+    print(f"🔧 Varsayılan ADMIN_CHAT_ID kullanılıyor: {ADMIN_CHAT_ID}")
+else:
+    print(f"✅ ADMIN_CHAT_ID yüklendi: {ADMIN_CHAT_ID}")
+
 def send_telegram_message(message, chat_id=None):
     """
     Telegram üzerinden mesaj gönderir.

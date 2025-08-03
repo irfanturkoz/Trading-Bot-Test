@@ -25,6 +25,15 @@ else:
     print("✅ Bot token environment variable'dan yüklendi")
 admin_chat_id = os.environ.get('ADMIN_CHAT_ID')
 
+# ADMIN_CHAT_ID kontrolü
+if not admin_chat_id:
+    print("⚠️ ADMIN_CHAT_ID environment variable bulunamadı!")
+    print("💡 .env dosyasına ADMIN_CHAT_ID ekleyin")
+    admin_chat_id = "123456789"  # Varsayılan değer
+    print(f"🔧 Varsayılan ADMIN_CHAT_ID kullanılıyor: {admin_chat_id}")
+else:
+    print(f"✅ ADMIN_CHAT_ID yüklendi: {admin_chat_id}")
+
 def test_bot_token():
     """Bot token'ının geçerli olup olmadığını test eder"""
     try:
