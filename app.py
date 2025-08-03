@@ -17,10 +17,10 @@ app = Flask(__name__)
 app.secret_key = 'admin_panel_secret_key_2024'
 
 # Environment variables kontrolü
-bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+bot_token = os.getenv('TELEGRAM_BOT_KEY')
 if not bot_token:
-    print("⚠️ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
-    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
+    print("⚠️ TELEGRAM_BOT_KEY environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_KEY ekleyin")
     bot_token = None
 else:
     print("✅ Bot token environment variable'dan yüklendi")
@@ -67,7 +67,7 @@ def run_bot():
         print(f"👤 Admin ID: {admin_chat_id}")
         
         # Environment variables'ları set et
-        os.environ['TELEGRAM_BOT_TOKEN'] = bot_token
+        os.environ['TELEGRAM_BOT_KEY'] = bot_token
         os.environ['ADMIN_CHAT_ID'] = admin_chat_id
         
         # Conflict kontrolü için bekle

@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Bot token'ını environment variable'dan al
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_KEY')
 if not TELEGRAM_BOT_TOKEN:
-    print("❌ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
-    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
+    print("❌ TELEGRAM_BOT_KEY environment variable bulunamadı!")
+    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_KEY ekleyin")
     raise ValueError("Bot token bulunamadı!")
 
 print("✅ Bot token environment variable'dan yüklendi")
