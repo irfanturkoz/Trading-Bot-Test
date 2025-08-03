@@ -1,6 +1,7 @@
 # formation_detector.py
 import numpy as np
 import pandas as pd
+from data_fetcher import fetch_ohlcv
 
 
 def detect_formations(df, window=20, tolerance=0.5):
@@ -98,7 +99,7 @@ def get_rsi(series, period=14):
 def detect_tobo(df, window=30):
     """
     Son window içinde TOBO (Ters Omuz Baş Omuz) formasyonu tespit eder.
-    Basit algoritma: 3 dip noktası, ortadaki en düşük, omuzlar baştan yukarıda ve birbirine yakın.
+    RSI, MACD ve hacim kriterleri ile gelişmiş skorlama sistemi.
     """
     if len(df) < window:
         return None
@@ -118,7 +119,9 @@ def detect_tobo(df, window=30):
             sol_tepe = highs[idx[0]]
             sag_tepe = highs[idx[2]]
             neckline = (sol_tepe + sag_tepe) / 2
-            return {
+            
+            # Temel formasyon verisi
+            formation_data = {
                 'sol_omuz': sol_omuz,
                 'bas': bas,
                 'sag_omuz': sag_omuz,
@@ -126,13 +129,22 @@ def detect_tobo(df, window=30):
                 'tobo_start': df['open_time'].iloc[-window+idx[0]],
                 'tobo_end': df['open_time'].iloc[-window+idx[2]]
             }
+            
+            # Gelişmiş skorlama sistemi
+            score_analysis = calculate_formation_score(df, 'TOBO', formation_data)
+            
+            # Sonuçları birleştir
+            result = formation_data.copy()
+            result.update(score_analysis)
+            
+            return result
     return None 
 
 
 def detect_obo(df, window=30):
     """
     Son window içinde OBO (Omuz Baş Omuz) formasyonu tespit eder.
-    Basit algoritma: 3 tepe noktası, ortadaki en yüksek, omuzlar baştan aşağıda ve birbirine yakın.
+    RSI, MACD ve hacim kriterleri ile gelişmiş skorlama sistemi.
     """
     if len(df) < window:
         return None
@@ -152,7 +164,9 @@ def detect_obo(df, window=30):
             sol_dip = lows[idx[0]]
             sag_dip = lows[idx[2]]
             neckline = (sol_dip + sag_dip) / 2
-            return {
+            
+            # Temel formasyon verisi
+            formation_data = {
                 'sol_omuz': sol_omuz,
                 'bas': bas,
                 'sag_omuz': sag_omuz,
@@ -160,6 +174,15 @@ def detect_obo(df, window=30):
                 'obo_start': df['open_time'].iloc[-window+idx[0]],
                 'obo_end': df['open_time'].iloc[-window+idx[2]]
             }
+            
+            # Gelişmiş skorlama sistemi
+            score_analysis = calculate_formation_score(df, 'OBO', formation_data)
+            
+            # Sonuçları birleştir
+            result = formation_data.copy()
+            result.update(score_analysis)
+            
+            return result
     return None 
 
 
@@ -481,7 +504,8 @@ def detect_falling_wedge(df, window=40):
         tp = entry_price + wedge_height  # Hedef = kama yüksekliği kadar yukarı
         sl = trough_prices[-1]  # Son dip seviyesi
         
-        return {
+        # Temel formasyon verisi
+        formation_data = {
             'peaks': recent_peaks,
             'troughs': recent_troughs,
             'peak_slope': peak_slope,
@@ -496,6 +520,15 @@ def detect_falling_wedge(df, window=40):
             'wedge_height': wedge_height,
             'score': score
         }
+        
+        # Gelişmiş skorlama sistemi
+        score_analysis = calculate_formation_score(df, 'FALLING_WEDGE', formation_data)
+        
+        # Sonuçları birleştir
+        result = formation_data.copy()
+        result.update(score_analysis)
+        
+        return result
         
     except Exception as e:
         return None
@@ -3926,3 +3959,1076 @@ def calculate_heikin_ashi(df):
         }
     except Exception as e:
         return None
+
+def analyze_rsi_formation_strength(df, formation_type, formation_data, rsi_period=14, oversold_threshold=30, overbought_threshold=70):
+    """
+    Formasyonun diplerinde RSI aşırı satımda mı kontrol eder.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi ('TOBO', 'OBO', 'FALLING_WEDGE', vb.)
+        formation_data: Formasyon verisi
+        rsi_period: RSI periyodu
+        oversold_threshold: Aşırı satım eşiği
+        overbought_threshold: Aşırı alım eşiği
+    
+    Returns:
+        dict: RSI analiz sonuçları
+    """
+    try:
+        # RSI hesapla
+        close = df['close']
+        delta = close.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=rsi_period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=rsi_period).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        
+        # Formasyon bölgesindeki RSI değerlerini analiz et
+        formation_rsi_scores = []
+        rsi_signals = []
+        
+        if formation_type == 'TOBO':
+            # TOBO için diplerde RSI aşırı satımda olmalı
+            if 'bas' in formation_data:
+                # Baş noktası civarındaki RSI
+                bas_idx = len(df) - 30  # Yaklaşık baş pozisyonu
+                if bas_idx >= 0:
+                    bas_rsi = rsi.iloc[bas_idx] if bas_idx < len(rsi) else rsi.iloc[-1]
+                    if bas_rsi < oversold_threshold:
+                        formation_rsi_scores.append(25)
+                        rsi_signals.append(f"TOBO Baş RSI: {bas_rsi:.1f} (Aşırı Satım)")
+                    else:
+                        formation_rsi_scores.append(10)
+                        rsi_signals.append(f"TOBO Baş RSI: {bas_rsi:.1f} (Normal)")
+        
+        elif formation_type == 'OBO':
+            # OBO için tepelerde RSI aşırı alımda olmalı
+            if 'bas' in formation_data:
+                # Baş noktası civarındaki RSI
+                bas_idx = len(df) - 30  # Yaklaşık baş pozisyonu
+                if bas_idx >= 0:
+                    bas_rsi = rsi.iloc[bas_idx] if bas_idx < len(rsi) else rsi.iloc[-1]
+                    if bas_rsi > overbought_threshold:
+                        formation_rsi_scores.append(25)
+                        rsi_signals.append(f"OBO Baş RSI: {bas_rsi:.1f} (Aşırı Alım)")
+                    else:
+                        formation_rsi_scores.append(10)
+                        rsi_signals.append(f"OBO Baş RSI: {bas_rsi:.1f} (Normal)")
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Falling Wedge için diplerde RSI aşırı satımda olmalı
+            if 'troughs' in formation_data:
+                # Son dip noktasındaki RSI
+                last_trough_idx = formation_data['troughs'][-1][0] if formation_data['troughs'] else len(df) - 10
+                if last_trough_idx < len(rsi):
+                    trough_rsi = rsi.iloc[last_trough_idx]
+                    if trough_rsi < oversold_threshold:
+                        formation_rsi_scores.append(25)
+                        rsi_signals.append(f"Falling Wedge Dip RSI: {trough_rsi:.1f} (Aşırı Satım)")
+                    else:
+                        formation_rsi_scores.append(10)
+                        rsi_signals.append(f"Falling Wedge Dip RSI: {trough_rsi:.1f} (Normal)")
+        
+        # Son RSI değeri
+        current_rsi = rsi.iloc[-1]
+        
+        # RSI trend analizi
+        rsi_trend = 'Yükselen' if current_rsi > rsi.iloc[-5] else 'Düşen'
+        
+        # RSI sinyal analizi
+        if current_rsi < oversold_threshold:
+            rsi_signal = 'Aşırı Satım'
+        elif current_rsi > overbought_threshold:
+            rsi_signal = 'Aşırı Alım'
+        else:
+            rsi_signal = 'Normal'
+        
+        total_rsi_score = sum(formation_rsi_scores) if formation_rsi_scores else 0
+        
+        return {
+            'current_rsi': current_rsi,
+            'rsi_trend': rsi_trend,
+            'rsi_signal': rsi_signal,
+            'formation_rsi_score': total_rsi_score,
+            'rsi_signals': rsi_signals,
+            'oversold': current_rsi < oversold_threshold,
+            'overbought': current_rsi > overbought_threshold
+        }
+        
+    except Exception as e:
+        return {
+            'current_rsi': 50,
+            'rsi_trend': 'Neutral',
+            'rsi_signal': 'Hata',
+            'formation_rsi_score': 0,
+            'rsi_signals': [f"RSI Hesaplama Hatası: {str(e)}"],
+            'oversold': False,
+            'overbought': False
+        }
+
+
+def analyze_macd_breakout_signal(df, formation_type, formation_data, fast=12, slow=26, signal=9):
+    """
+    Formasyon kırılımında MACD sinyal kesişimi var mı kontrol eder.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi
+        formation_data: Formasyon verisi
+        fast: MACD hızlı periyot
+        slow: MACD yavaş periyot
+        signal: MACD sinyal periyodu
+    
+    Returns:
+        dict: MACD analiz sonuçları
+    """
+    try:
+        # MACD hesapla
+        exp1 = df['close'].ewm(span=fast).mean()
+        exp2 = df['close'].ewm(span=slow).mean()
+        macd_line = exp1 - exp2
+        signal_line = macd_line.ewm(span=signal).mean()
+        histogram = macd_line - signal_line
+        
+        # Son 10 mumdaki MACD kesişimlerini kontrol et
+        macd_crossovers = []
+        macd_breakout_score = 0
+        
+        for i in range(max(0, len(macd_line)-10), len(macd_line)-1):
+            # Bullish crossover
+            if macd_line.iloc[i] <= signal_line.iloc[i] and macd_line.iloc[i+1] > signal_line.iloc[i+1]:
+                macd_crossovers.append({
+                    'type': 'Bullish',
+                    'index': i+1,
+                    'price': df['close'].iloc[i+1]
+                })
+                if formation_type in ['TOBO', 'FALLING_WEDGE']:
+                    macd_breakout_score += 20
+            # Bearish crossover
+            elif macd_line.iloc[i] >= signal_line.iloc[i] and macd_line.iloc[i+1] < signal_line.iloc[i+1]:
+                macd_crossovers.append({
+                    'type': 'Bearish',
+                    'index': i+1,
+                    'price': df['close'].iloc[i+1]
+                })
+                if formation_type == 'OBO':
+                    macd_breakout_score += 20
+        
+        # MACD trend analizi
+        current_macd = macd_line.iloc[-1]
+        current_signal = signal_line.iloc[-1]
+        current_histogram = histogram.iloc[-1]
+        
+        # MACD momentum analizi
+        if current_macd > current_signal:
+            macd_trend = 'Bullish'
+            if current_histogram > histogram.iloc[-2]:
+                macd_momentum = 'Güçlenen'
+            else:
+                macd_momentum = 'Zayıflayan'
+        else:
+            macd_trend = 'Bearish'
+            if current_histogram < histogram.iloc[-2]:
+                macd_momentum = 'Güçlenen'
+            else:
+                macd_momentum = 'Zayıflayan'
+        
+        # Formasyon ile MACD uyumu
+        formation_macd_alignment = 0
+        if formation_type in ['TOBO', 'FALLING_WEDGE'] and macd_trend == 'Bullish':
+            formation_macd_alignment = 15
+        elif formation_type == 'OBO' and macd_trend == 'Bearish':
+            formation_macd_alignment = 15
+        
+        return {
+            'current_macd': current_macd,
+            'current_signal': current_signal,
+            'current_histogram': current_histogram,
+            'macd_trend': macd_trend,
+            'macd_momentum': macd_momentum,
+            'macd_crossovers': macd_crossovers,
+            'macd_breakout_score': macd_breakout_score,
+            'formation_macd_alignment': formation_macd_alignment,
+            'total_macd_score': macd_breakout_score + formation_macd_alignment
+        }
+        
+    except Exception as e:
+        return {
+            'current_macd': 0,
+            'current_signal': 0,
+            'current_histogram': 0,
+            'macd_trend': 'Neutral',
+            'macd_momentum': 'Neutral',
+            'macd_crossovers': [],
+            'macd_breakout_score': 0,
+            'formation_macd_alignment': 0,
+            'total_macd_score': 0
+        }
+
+
+def analyze_volume_pattern(df, formation_type, formation_data, volume_threshold=1.5):
+    """
+    Formasyon süresince hacim azalıp, breakout sırasında artıyor mu diye kontrol eder.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi
+        formation_data: Formasyon verisi
+        volume_threshold: Hacim artış eşiği
+    
+    Returns:
+        dict: Hacim analiz sonuçları
+    """
+    try:
+        volumes = df['volume']
+        
+        # Formasyon bölgesi hacim analizi
+        formation_volume_score = 0
+        volume_signals = []
+        
+        # Son 20 mumun ortalama hacmi
+        avg_volume = volumes.tail(20).mean()
+        current_volume = volumes.iloc[-1]
+        
+        # Hacim trendi (son 10 mum)
+        recent_volumes = volumes.tail(10)
+        volume_trend = 'Yükselen' if recent_volumes.iloc[-1] > recent_volumes.iloc[0] else 'Düşen'
+        
+        # Formasyon süresince hacim analizi
+        if formation_type in ['TOBO', 'OBO']:
+            # Formasyon süresince hacim azalmalı
+            formation_start_idx = len(df) - 30  # Yaklaşık formasyon başlangıcı
+            formation_end_idx = len(df) - 10    # Yaklaşık formasyon sonu
+            
+            if formation_start_idx >= 0 and formation_end_idx >= 0:
+                formation_volumes = volumes.iloc[formation_start_idx:formation_end_idx]
+                if len(formation_volumes) > 5:
+                    formation_volume_trend = 'Azalan' if formation_volumes.iloc[-1] < formation_volumes.iloc[0] else 'Artış'
+                    
+                    if formation_volume_trend == 'Azalan':
+                        formation_volume_score += 15
+                        volume_signals.append("Formasyon süresince hacim azalıyor ✓")
+                    else:
+                        volume_signals.append("Formasyon süresince hacim artıyor ✗")
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Falling Wedge için sıkışma süresince hacim azalmalı
+            if 'troughs' in formation_data and len(formation_data['troughs']) >= 2:
+                wedge_start_idx = formation_data['troughs'][0][0]
+                wedge_end_idx = formation_data['troughs'][-1][0]
+                
+                if wedge_start_idx < wedge_end_idx and wedge_end_idx < len(volumes):
+                    wedge_volumes = volumes.iloc[wedge_start_idx:wedge_end_idx]
+                    if len(wedge_volumes) > 3:
+                        wedge_volume_trend = 'Azalan' if wedge_volumes.iloc[-1] < wedge_volumes.iloc[0] else 'Artış'
+                        
+                        if wedge_volume_trend == 'Azalan':
+                            formation_volume_score += 15
+                            volume_signals.append("Wedge sıkışması süresince hacim azalıyor ✓")
+                        else:
+                            volume_signals.append("Wedge sıkışması süresince hacim artıyor ✗")
+        
+        # Breakout hacim analizi
+        breakout_volume_score = 0
+        if current_volume > avg_volume * volume_threshold:
+            breakout_volume_score += 20
+            volume_signals.append(f"Breakout hacim teyidi: {current_volume/avg_volume:.1f}x ✓")
+        else:
+            volume_signals.append(f"Breakout hacim yetersiz: {current_volume/avg_volume:.1f}x ✗")
+        
+        # Hacim momentum analizi
+        volume_momentum = 'Güçlenen' if current_volume > volumes.iloc[-2] else 'Zayıflayan'
+        
+        # Hacim pozisyonu (Bollinger Bands benzeri)
+        volume_std = volumes.tail(20).std()
+        volume_upper = avg_volume + (volume_std * 2)
+        volume_lower = avg_volume - (volume_std * 2)
+        
+        if current_volume > volume_upper:
+            volume_position = 'Yüksek'
+        elif current_volume < volume_lower:
+            volume_position = 'Düşük'
+        else:
+            volume_position = 'Normal'
+        
+        total_volume_score = formation_volume_score + breakout_volume_score
+        
+        return {
+            'current_volume': current_volume,
+            'avg_volume': avg_volume,
+            'volume_ratio': current_volume / avg_volume if avg_volume > 0 else 1,
+            'volume_trend': volume_trend,
+            'volume_momentum': volume_momentum,
+            'volume_position': volume_position,
+            'formation_volume_score': formation_volume_score,
+            'breakout_volume_score': breakout_volume_score,
+            'total_volume_score': total_volume_score,
+            'volume_signals': volume_signals,
+            'breakout_confirmed': current_volume > avg_volume * volume_threshold
+        }
+        
+    except Exception as e:
+        return {
+            'current_volume': 0,
+            'avg_volume': 0,
+            'volume_ratio': 1,
+            'volume_trend': 'Neutral',
+            'volume_momentum': 'Neutral',
+            'volume_position': 'Normal',
+            'formation_volume_score': 0,
+            'breakout_volume_score': 0,
+            'total_volume_score': 0,
+            'volume_signals': [f"Hacim Analiz Hatası: {str(e)}"],
+            'breakout_confirmed': False
+        }
+
+
+def calculate_formation_score(df, formation_type, formation_data):
+    """
+    Formasyonun gücünü puanlayan gelişmiş fonksiyon.
+    RSI, MACD, hacim, breakout, geometrik skor ve backtest kriterlerini birleştirir.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi
+        formation_data: Formasyon verisi
+    
+    Returns:
+        dict: Toplam formasyon skoru ve detayları
+    """
+    try:
+        # RSI analizi
+        rsi_analysis = analyze_rsi_formation_strength(df, formation_type, formation_data)
+        
+        # MACD analizi
+        macd_analysis = analyze_macd_breakout_signal(df, formation_type, formation_data)
+        
+        # Hacim analizi
+        volume_analysis = analyze_volume_pattern(df, formation_type, formation_data)
+        
+        # Breakout analizi
+        breakout_analysis = analyze_breakout_candle(df, formation_type, formation_data)
+        
+        # Geometrik skor analizi
+        geometric_analysis = calculate_formation_geometric_score(df, formation_type, formation_data)
+        
+        # Backtest analizi
+        backtest_analysis = backtest_formation_success_rate(df, formation_type, formation_data)
+        
+        # Temel formasyon skoru
+        base_score = 0
+        if formation_type == 'TOBO':
+            base_score = 25
+        elif formation_type == 'OBO':
+            base_score = 25
+        elif formation_type == 'FALLING_WEDGE':
+            base_score = 20
+        else:
+            base_score = 15
+        
+        # Toplam skor hesaplama (yeni sistem)
+        total_score = (
+            base_score +  # Temel formasyon skoru (25/20/15)
+            rsi_analysis['formation_rsi_score'] +  # RSI skoru (max 25)
+            macd_analysis['total_macd_score'] +  # MACD skoru (max 35)
+            volume_analysis['total_volume_score'] +  # Hacim skoru (max 35)
+            breakout_analysis['breakout_strength'] +  # Breakout skoru (max 40)
+            geometric_analysis['geometric_score'] +  # Geometrik skor (max 60)
+            (backtest_analysis['success_rate'] * 0.3)  # Backtest skoru (max 30)
+        )
+        
+        # Maksimum skor (yeni sistem)
+        max_score = 250  # 25 + 25 + 35 + 35 + 40 + 60 + 30
+        
+        # Skor yüzdesi
+        score_percentage = (total_score / max_score) * 100 if max_score > 0 else 0
+        
+        # Güven seviyesi (yeni kriterler)
+        if score_percentage >= 85:
+            confidence = 'Mükemmel'
+        elif score_percentage >= 75:
+            confidence = 'Çok Yüksek'
+        elif score_percentage >= 65:
+            confidence = 'Yüksek'
+        elif score_percentage >= 50:
+            confidence = 'Orta'
+        else:
+            confidence = 'Düşük'
+        
+        # Sinyal yönü
+        if formation_type in ['TOBO', 'FALLING_WEDGE']:
+            signal_direction = 'Long'
+        elif formation_type == 'OBO':
+            signal_direction = 'Short'
+        else:
+            signal_direction = 'Neutral'
+        
+        # Tüm sinyalleri birleştir
+        all_signals = (
+            rsi_analysis['rsi_signals'] + 
+            volume_analysis['volume_signals'] +
+            breakout_analysis['breakout_signals'] +
+            geometric_analysis['geometric_signals'] +
+            backtest_analysis['backtest_signals'] +
+            [f"MACD {macd_analysis['macd_trend']}: {macd_analysis['total_macd_score']} puan"]
+        )
+        
+        return {
+            'total_score': total_score,
+            'max_score': max_score,
+            'score_percentage': score_percentage,
+            'confidence': confidence,
+            'signal_direction': signal_direction,
+            'base_score': base_score,
+            'rsi_analysis': rsi_analysis,
+            'macd_analysis': macd_analysis,
+            'volume_analysis': volume_analysis,
+            'breakout_analysis': breakout_analysis,
+            'geometric_analysis': geometric_analysis,
+            'backtest_analysis': backtest_analysis,
+            'all_signals': all_signals
+        }
+        
+    except Exception as e:
+        return {
+            'total_score': 0,
+            'max_score': 115,
+            'score_percentage': 0,
+            'confidence': 'Hata',
+            'signal_direction': 'Neutral',
+            'base_score': 0,
+            'rsi_analysis': {},
+            'macd_analysis': {},
+            'volume_analysis': {},
+            'all_signals': [f"Skor Hesaplama Hatası: {str(e)}"]
+        }
+
+def analyze_breakout_candle(df, formation_type, formation_data):
+    """
+    Formasyonun sonundaki breakout mumunun hacmini ve gövde boyunu analiz eder.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi
+        formation_data: Formasyon verisi
+    
+    Returns:
+        dict: Breakout analiz sonuçları
+    """
+    try:
+        # Son 5 mumu analiz et
+        recent_candles = df.tail(5)
+        
+        # Breakout mumu (son mum)
+        breakout_candle = recent_candles.iloc[-1]
+        prev_candle = recent_candles.iloc[-2]
+        
+        # Mum gövde boyu hesaplama
+        candle_body = abs(breakout_candle['close'] - breakout_candle['open'])
+        candle_range = breakout_candle['high'] - breakout_candle['low']
+        body_ratio = candle_body / candle_range if candle_range > 0 else 0
+        
+        # Hacim analizi
+        avg_volume = df['volume'].tail(20).mean()
+        volume_ratio = breakout_candle['volume'] / avg_volume if avg_volume > 0 else 1
+        
+        # Breakout gücü analizi
+        breakout_strength = 0
+        breakout_signals = []
+        
+        if formation_type in ['TOBO', 'FALLING_WEDGE']:
+            # Long breakout - yukarı kırılım
+            if breakout_candle['close'] > breakout_candle['open']:
+                # Yeşil mum
+                if body_ratio > 0.6:
+                    breakout_strength += 20
+                    breakout_signals.append("Güçlü yeşil mum ✓")
+                elif body_ratio > 0.4:
+                    breakout_strength += 15
+                    breakout_signals.append("Orta yeşil mum ✓")
+                else:
+                    breakout_strength += 5
+                    breakout_signals.append("Zayıf yeşil mum")
+                
+                # Hacim teyidi
+                if volume_ratio > 1.5:
+                    breakout_strength += 20
+                    breakout_signals.append(f"Yüksek hacim: {volume_ratio:.1f}x ✓")
+                elif volume_ratio > 1.2:
+                    breakout_strength += 15
+                    breakout_signals.append(f"Orta hacim: {volume_ratio:.1f}x ✓")
+                else:
+                    breakout_signals.append(f"Düşük hacim: {volume_ratio:.1f}x ✗")
+            
+            else:
+                # Kırmızı mum - zayıf breakout
+                breakout_strength += 5
+                breakout_signals.append("Kırmızı mum - zayıf breakout ✗")
+        
+        elif formation_type == 'OBO':
+            # Short breakout - aşağı kırılım
+            if breakout_candle['close'] < breakout_candle['open']:
+                # Kırmızı mum
+                if body_ratio > 0.6:
+                    breakout_strength += 20
+                    breakout_signals.append("Güçlü kırmızı mum ✓")
+                elif body_ratio > 0.4:
+                    breakout_strength += 15
+                    breakout_signals.append("Orta kırmızı mum ✓")
+                else:
+                    breakout_strength += 5
+                    breakout_signals.append("Zayıf kırmızı mum")
+                
+                # Hacim teyidi
+                if volume_ratio > 1.5:
+                    breakout_strength += 20
+                    breakout_signals.append(f"Yüksek hacim: {volume_ratio:.1f}x ✓")
+                elif volume_ratio > 1.2:
+                    breakout_strength += 15
+                    breakout_signals.append(f"Orta hacim: {volume_ratio:.1f}x ✓")
+                else:
+                    breakout_signals.append(f"Düşük hacim: {volume_ratio:.1f}x ✗")
+            
+            else:
+                # Yeşil mum - zayıf breakout
+                breakout_strength += 5
+                breakout_signals.append("Yeşil mum - zayıf breakout ✗")
+        
+        # Breakout momentum analizi
+        price_change = (breakout_candle['close'] - prev_candle['close']) / prev_candle['close'] * 100
+        momentum = 'Güçlü' if abs(price_change) > 2 else 'Orta' if abs(price_change) > 1 else 'Zayıf'
+        
+        # Breakout kalitesi
+        if breakout_strength >= 35:
+            quality = 'Çok Güçlü'
+        elif breakout_strength >= 25:
+            quality = 'Güçlü'
+        elif breakout_strength >= 15:
+            quality = 'Orta'
+        else:
+            quality = 'Zayıf'
+        
+        return {
+            'breakout_strength': breakout_strength,
+            'body_ratio': body_ratio,
+            'volume_ratio': volume_ratio,
+            'price_change': price_change,
+            'momentum': momentum,
+            'quality': quality,
+            'breakout_signals': breakout_signals,
+            'candle_color': 'Green' if breakout_candle['close'] > breakout_candle['open'] else 'Red',
+            'candle_body': candle_body,
+            'candle_range': candle_range
+        }
+        
+    except Exception as e:
+        return {
+            'breakout_strength': 0,
+            'body_ratio': 0,
+            'volume_ratio': 1,
+            'price_change': 0,
+            'momentum': 'Neutral',
+            'quality': 'Hata',
+            'breakout_signals': [f"Breakout Analiz Hatası: {str(e)}"],
+            'candle_color': 'Neutral',
+            'candle_body': 0,
+            'candle_range': 0
+        }
+
+
+def calculate_formation_geometric_score(df, formation_type, formation_data):
+    """
+    Formasyonun geometrik yapısına uygun bir 'formasyon skoru' hesaplar.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi
+        formation_data: Formasyon verisi
+    
+    Returns:
+        dict: Geometrik skor analizi
+    """
+    try:
+        geometric_score = 0
+        geometric_signals = []
+        
+        if formation_type == 'TOBO':
+            # TOBO geometrik analizi
+            if 'sol_omuz' in formation_data and 'bas' in formation_data and 'sag_omuz' in formation_data:
+                sol_omuz = formation_data['sol_omuz']
+                bas = formation_data['bas']
+                sag_omuz = formation_data['sag_omuz']
+                neckline = formation_data['neckline']
+                
+                # Simetri analizi
+                omuz_diff = abs(sol_omuz - sag_omuz)
+                simetri_ratio = omuz_diff / bas if bas > 0 else 1
+                
+                if simetri_ratio < 0.05:
+                    geometric_score += 25
+                    geometric_signals.append("Mükemmel simetri ✓")
+                elif simetri_ratio < 0.10:
+                    geometric_score += 20
+                    geometric_signals.append("İyi simetri ✓")
+                elif simetri_ratio < 0.15:
+                    geometric_score += 15
+                    geometric_signals.append("Orta simetri ✓")
+                else:
+                    geometric_signals.append("Zayıf simetri ✗")
+                
+                # Baş derinliği analizi
+                bas_depth = (neckline - bas) / neckline if neckline > 0 else 0
+                if bas_depth > 0.05:
+                    geometric_score += 20
+                    geometric_signals.append(f"Derin baş: %{bas_depth*100:.1f} ✓")
+                else:
+                    geometric_signals.append(f"Sığ baş: %{bas_depth*100:.1f} ✗")
+                
+                # Omuz yüksekliği analizi
+                omuz_height = (sol_omuz - bas) / bas if bas > 0 else 0
+                if 0.02 < omuz_height < 0.15:
+                    geometric_score += 15
+                    geometric_signals.append("İdeal omuz yüksekliği ✓")
+                else:
+                    geometric_signals.append(f"Uygun olmayan omuz yüksekliği ✗")
+        
+        elif formation_type == 'OBO':
+            # OBO geometrik analizi
+            if 'sol_omuz' in formation_data and 'bas' in formation_data and 'sag_omuz' in formation_data:
+                sol_omuz = formation_data['sol_omuz']
+                bas = formation_data['bas']
+                sag_omuz = formation_data['sag_omuz']
+                neckline = formation_data['neckline']
+                
+                # Simetri analizi
+                omuz_diff = abs(sol_omuz - sag_omuz)
+                simetri_ratio = omuz_diff / bas if bas > 0 else 1
+                
+                if simetri_ratio < 0.05:
+                    geometric_score += 25
+                    geometric_signals.append("Mükemmel simetri ✓")
+                elif simetri_ratio < 0.10:
+                    geometric_score += 20
+                    geometric_signals.append("İyi simetri ✓")
+                elif simetri_ratio < 0.15:
+                    geometric_score += 15
+                    geometric_signals.append("Orta simetri ✓")
+                else:
+                    geometric_signals.append("Zayıf simetri ✗")
+                
+                # Baş yüksekliği analizi
+                bas_height = (bas - neckline) / neckline if neckline > 0 else 0
+                if bas_height > 0.05:
+                    geometric_score += 20
+                    geometric_signals.append(f"Yüksek baş: %{bas_height*100:.1f} ✓")
+                else:
+                    geometric_signals.append(f"Alçak baş: %{bas_height*100:.1f} ✗")
+                
+                # Omuz derinliği analizi
+                omuz_depth = (bas - sol_omuz) / bas if bas > 0 else 0
+                if 0.02 < omuz_depth < 0.15:
+                    geometric_score += 15
+                    geometric_signals.append("İdeal omuz derinliği ✓")
+                else:
+                    geometric_signals.append(f"Uygun olmayan omuz derinliği ✗")
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Falling Wedge geometrik analizi
+            if 'peaks' in formation_data and 'troughs' in formation_data:
+                peaks = formation_data['peaks']
+                troughs = formation_data['troughs']
+                
+                # Kama açısı analizi
+                peak_slope = formation_data.get('peak_slope', 0)
+                trough_slope = formation_data.get('trough_slope', 0)
+                
+                slope_ratio = abs(peak_slope) / abs(trough_slope) if trough_slope != 0 else 1
+                
+                if slope_ratio > 1.5:
+                    geometric_score += 25
+                    geometric_signals.append("İdeal kama açısı ✓")
+                elif slope_ratio > 1.2:
+                    geometric_score += 20
+                    geometric_signals.append("İyi kama açısı ✓")
+                else:
+                    geometric_signals.append("Zayıf kama açısı ✗")
+                
+                # Sıkışma analizi
+                if len(peaks) >= 3 and len(troughs) >= 3:
+                    first_gap = peaks[0][1] - troughs[0][1]
+                    last_gap = peaks[-1][1] - troughs[-1][1]
+                    squeeze_ratio = last_gap / first_gap if first_gap > 0 else 1
+                    
+                    if squeeze_ratio < 0.7:
+                        geometric_score += 20
+                        geometric_signals.append("Güçlü sıkışma ✓")
+                    elif squeeze_ratio < 0.9:
+                        geometric_score += 15
+                        geometric_signals.append("Orta sıkışma ✓")
+                    else:
+                        geometric_signals.append("Zayıf sıkışma ✗")
+                
+                # Tepe ve dip sayısı
+                if len(peaks) >= 4 and len(troughs) >= 4:
+                    geometric_score += 15
+                    geometric_signals.append("Yeterli tepe/dip sayısı ✓")
+                else:
+                    geometric_signals.append("Yetersiz tepe/dip sayısı ✗")
+        
+        # Genel geometrik kalite
+        if geometric_score >= 50:
+            quality = 'Mükemmel'
+        elif geometric_score >= 40:
+            quality = 'Çok İyi'
+        elif geometric_score >= 30:
+            quality = 'İyi'
+        elif geometric_score >= 20:
+            quality = 'Orta'
+        else:
+            quality = 'Zayıf'
+        
+        return {
+            'geometric_score': geometric_score,
+            'quality': quality,
+            'geometric_signals': geometric_signals
+        }
+        
+    except Exception as e:
+        return {
+            'geometric_score': 0,
+            'quality': 'Hata',
+            'geometric_signals': [f"Geometrik Analiz Hatası: {str(e)}"]
+        }
+
+
+def backtest_formation_success_rate(df, formation_type, formation_data, lookback_periods=20):
+    """
+    Formasyonun çalışıp çalışmadığını backtest için başarı oranı hesaplar.
+    
+    Args:
+        df: OHLCV verisi
+        formation_type: Formasyon tipi
+        formation_data: Formasyon verisi
+        lookback_periods: Geriye bakılacak periyot sayısı
+    
+    Returns:
+        dict: Backtest sonuçları
+    """
+    try:
+        if len(df) < lookback_periods:
+            return {
+                'success_rate': 0,
+                'total_tests': 0,
+                'successful_tests': 0,
+                'avg_profit': 0,
+                'max_profit': 0,
+                'max_loss': 0,
+                'backtest_signals': ["Yetersiz veri"]
+            }
+        
+        # Geriye bakarak benzer formasyonları bul
+        similar_formations = []
+        current_price = df['close'].iloc[-1]
+        
+        for i in range(lookback_periods, len(df) - 10):
+            # Geçmiş veri penceresi
+            historical_df = df.iloc[i-30:i+10]  # 30 mum öncesi + 10 mum sonrası
+            
+            # Formasyon tespiti
+            if formation_type == 'TOBO':
+                detected = detect_tobo(historical_df)
+            elif formation_type == 'OBO':
+                detected = detect_obo(historical_df)
+            elif formation_type == 'FALLING_WEDGE':
+                detected = detect_falling_wedge(historical_df)
+            else:
+                continue
+            
+            if detected:
+                # Formasyon sonrası fiyat hareketini analiz et
+                formation_end_idx = 30  # Formasyon bitiş noktası
+                future_prices = historical_df['close'].iloc[formation_end_idx:formation_end_idx+10]
+                
+                if len(future_prices) >= 5:
+                    entry_price = historical_df['close'].iloc[formation_end_idx]
+                    max_price = future_prices.max()
+                    min_price = future_prices.min()
+                    
+                    # Başarı kriterleri
+                    if formation_type in ['TOBO', 'FALLING_WEDGE']:
+                        # Long formasyonlar - yukarı hareket
+                        profit_pct = (max_price - entry_price) / entry_price * 100
+                        loss_pct = (entry_price - min_price) / entry_price * 100
+                        success = profit_pct > 2 and profit_pct > loss_pct  # %2'den fazla kâr ve kâr > zarar
+                    else:  # OBO
+                        # Short formasyonlar - aşağı hareket
+                        profit_pct = (entry_price - min_price) / entry_price * 100
+                        loss_pct = (max_price - entry_price) / entry_price * 100
+                        success = profit_pct > 2 and profit_pct > loss_pct
+                    
+                    similar_formations.append({
+                        'entry_price': entry_price,
+                        'max_price': max_price,
+                        'min_price': min_price,
+                        'profit_pct': profit_pct,
+                        'loss_pct': loss_pct,
+                        'success': success,
+                        'date': historical_df.index[formation_end_idx]
+                    })
+        
+        # İstatistikleri hesapla
+        if similar_formations:
+            successful_tests = sum(1 for f in similar_formations if f['success'])
+            total_tests = len(similar_formations)
+            success_rate = (successful_tests / total_tests) * 100 if total_tests > 0 else 0
+            
+            # Ortalama kâr/zarar
+            avg_profit = sum(f['profit_pct'] for f in similar_formations) / total_tests
+            max_profit = max(f['profit_pct'] for f in similar_formations)
+            max_loss = max(f['loss_pct'] for f in similar_formations)
+            
+            # Başarı sinyalleri
+            backtest_signals = []
+            if success_rate >= 70:
+                backtest_signals.append(f"Çok Yüksek Başarı: %{success_rate:.1f} ✓")
+            elif success_rate >= 60:
+                backtest_signals.append(f"Yüksek Başarı: %{success_rate:.1f} ✓")
+            elif success_rate >= 50:
+                backtest_signals.append(f"Orta Başarı: %{success_rate:.1f} ✓")
+            else:
+                backtest_signals.append(f"Düşük Başarı: %{success_rate:.1f} ✗")
+            
+            backtest_signals.append(f"Ortalama Kâr: %{avg_profit:.1f}")
+            backtest_signals.append(f"Maksimum Kâr: %{max_profit:.1f}")
+            backtest_signals.append(f"Maksimum Zarar: %{max_loss:.1f}")
+            backtest_signals.append(f"Test Sayısı: {total_tests}")
+            
+        else:
+            success_rate = 0
+            total_tests = 0
+            successful_tests = 0
+            avg_profit = 0
+            max_profit = 0
+            max_loss = 0
+            backtest_signals = ["Benzer formasyon bulunamadı"]
+        
+        return {
+            'success_rate': success_rate,
+            'total_tests': total_tests,
+            'successful_tests': successful_tests,
+            'avg_profit': avg_profit,
+            'max_profit': max_profit,
+            'max_loss': max_loss,
+            'backtest_signals': backtest_signals
+        }
+        
+    except Exception as e:
+        return {
+            'success_rate': 0,
+            'total_tests': 0,
+            'successful_tests': 0,
+            'avg_profit': 0,
+            'max_profit': 0,
+            'max_loss': 0,
+            'backtest_signals': [f"Backtest Hatası: {str(e)}"]
+        }
+
+def analyze_multiple_timeframes(df_dict, formation_type, symbol):
+    """
+    Çoklu zaman dilimi analizi yapar.
+    1h, 4h, 1d, 1w periyotlarını analiz eder ve en az 2'sinde onay varsa işlemi önerir.
+    
+    Args:
+        df_dict: Her periyot için OHLCV verisi {'1h': df, '4h': df, '1d': df, '1w': df}
+        formation_type: Formasyon tipi
+        symbol: Sembol adı
+    
+    Returns:
+        dict: Çoklu zaman dilimi analiz sonuçları
+    """
+    try:
+        timeframes = ['1h', '4h', '1d', '1w']
+        timeframe_results = {}
+        total_confirmations = 0
+        total_score = 0
+        
+        for tf in timeframes:
+            if tf in df_dict and df_dict[tf] is not None and not df_dict[tf].empty:
+                df = df_dict[tf]
+                
+                # Formasyon tespiti
+                if formation_type == 'TOBO':
+                    formation_data = detect_tobo(df)
+                elif formation_type == 'OBO':
+                    formation_data = detect_obo(df)
+                elif formation_type == 'FALLING_WEDGE':
+                    formation_data = detect_falling_wedge(df)
+                else:
+                    formation_data = None
+                
+                if formation_data and 'total_score' in formation_data:
+                    # Formasyon tespit edildi ve skorlama var
+                    score_percentage = formation_data['score_percentage']
+                    confidence = formation_data['confidence']
+                    
+                    # Onay kriterleri
+                    is_confirmed = False
+                    if score_percentage >= 50:  # %50 ve üstü skor
+                        is_confirmed = True
+                        total_confirmations += 1
+                    
+                    timeframe_results[tf] = {
+                        'detected': True,
+                        'score_percentage': score_percentage,
+                        'confidence': confidence,
+                        'signal_direction': formation_data['signal_direction'],
+                        'confirmed': is_confirmed,
+                        'formation_data': formation_data
+                    }
+                    
+                    total_score += score_percentage
+                else:
+                    # Formasyon tespit edilmedi
+                    timeframe_results[tf] = {
+                        'detected': False,
+                        'score_percentage': 0,
+                        'confidence': 'Yok',
+                        'signal_direction': 'Neutral',
+                        'confirmed': False,
+                        'formation_data': None
+                    }
+            else:
+                # Veri yok
+                timeframe_results[tf] = {
+                    'detected': False,
+                    'score_percentage': 0,
+                    'confidence': 'Veri Yok',
+                    'signal_direction': 'Neutral',
+                    'confirmed': False,
+                    'formation_data': None
+                }
+        
+        # Genel sonuç hesaplama
+        avg_score = total_score / len(timeframes) if len(timeframes) > 0 else 0
+        
+        # En az 2 zaman diliminde onay var mı?
+        final_decision = total_confirmations >= 2
+        
+        # Sinyal yönü belirleme (çoğunluk kuralı)
+        long_count = sum(1 for tf in timeframe_results.values() 
+                        if tf['detected'] and tf['signal_direction'] == 'Long')
+        short_count = sum(1 for tf in timeframe_results.values() 
+                         if tf['detected'] and tf['signal_direction'] == 'Short')
+        
+        if long_count > short_count:
+            final_signal = 'Long'
+        elif short_count > long_count:
+            final_signal = 'Short'
+        else:
+            final_signal = 'Neutral'
+        
+        # Güven seviyesi
+        if total_confirmations >= 3:
+            confidence_level = 'Çok Yüksek'
+        elif total_confirmations >= 2:
+            confidence_level = 'Yüksek'
+        else:
+            confidence_level = 'Düşük'
+        
+        return {
+            'final_decision': final_decision,
+            'total_confirmations': total_confirmations,
+            'avg_score': avg_score,
+            'final_signal': final_signal,
+            'confidence_level': confidence_level,
+            'timeframe_results': timeframe_results,
+            'symbol': symbol,
+            'formation_type': formation_type
+        }
+        
+    except Exception as e:
+        return {
+            'final_decision': False,
+            'total_confirmations': 0,
+            'avg_score': 0,
+            'final_signal': 'Neutral',
+            'confidence_level': 'Hata',
+            'timeframe_results': {},
+            'symbol': symbol,
+            'formation_type': formation_type,
+            'error': str(e)
+        }
+
+
+def get_multiple_timeframe_data(symbol, timeframes=['1h', '4h', '1d', '1w']):
+    """
+    Birden fazla zaman dilimi için veri çeker.
+    
+    Args:
+        symbol: Sembol adı
+        timeframes: Zaman dilimleri listesi
+    
+    Returns:
+        dict: Her zaman dilimi için OHLCV verisi
+    """
+    try:
+        df_dict = {}
+        
+        for tf in timeframes:
+            try:
+                df = fetch_ohlcv(symbol, tf)
+                if df is not None and not df.empty and len(df) >= 50:
+                    df_dict[tf] = df
+                else:
+                    df_dict[tf] = None
+            except Exception as e:
+                print(f"❌ {symbol} {tf} verisi çekilemedi: {str(e)}")
+                df_dict[tf] = None
+        
+        return df_dict
+        
+    except Exception as e:
+        print(f"❌ {symbol} çoklu zaman dilimi verisi çekilemedi: {str(e)}")
+        return {}
+
+
+def format_multitimeframe_analysis_result(result):
+    """
+    Çoklu zaman dilimi analiz sonucunu formatlar.
+    
+    Args:
+        result: analyze_multiple_timeframes sonucu
+    
+    Returns:
+        str: Formatlanmış sonuç metni
+    """
+    try:
+        if not result['final_decision']:
+            return f"❌ {result['symbol']} - Yetersiz onay ({result['total_confirmations']}/4)"
+        
+        tf_results = result['timeframe_results']
+        symbol = result['symbol']
+        formation_type = result['formation_type']
+        confirmations = result['total_confirmations']
+        avg_score = result['avg_score']
+        final_signal = result['final_signal']
+        confidence = result['confidence_level']
+        
+        # Ana başlık
+        output = f"🎯 {symbol} - {formation_type} ({final_signal})\n"
+        output += f"📊 Onay: {confirmations}/4 | Ortalama Skor: %{avg_score:.1f} | Güven: {confidence}\n"
+        output += "=" * 50 + "\n"
+        
+        # Her zaman dilimi için detay
+        for tf, tf_result in tf_results.items():
+            if tf_result['detected']:
+                status = "✅" if tf_result['confirmed'] else "⚠️"
+                output += f"{status} {tf}: %{tf_result['score_percentage']:.1f} ({tf_result['confidence']})\n"
+            else:
+                output += f"❌ {tf}: {tf_result['confidence']}\n"
+        
+        return output
+        
+    except Exception as e:
+        return f"❌ Format hatası: {str(e)}"

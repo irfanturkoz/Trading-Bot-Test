@@ -2,7 +2,7 @@ import requests
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from data_fetcher import fetch_ohlcv
-from formation_detector import find_all_tobo, find_all_obo, detect_falling_wedge, calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands, calculate_stochastic, calculate_adx, analyze_all_formations, analyze_all_formations_advanced, detect_cup_and_handle, detect_bullish_bearish_flag_advanced, detect_rising_wedge, calculate_ichimoku, calculate_supertrend, calculate_vwap, calculate_obv, calculate_heikin_ashi
+from formation_detector import find_all_tobo, find_all_obo, detect_falling_wedge, calculate_fibonacci_levels, calculate_macd, calculate_bollinger_bands, calculate_stochastic, calculate_adx, analyze_all_formations, analyze_all_formations_advanced, detect_cup_and_handle, detect_bullish_bearish_flag_advanced, detect_rising_wedge, calculate_ichimoku, calculate_supertrend, calculate_vwap, calculate_obv, calculate_heikin_ashi, analyze_rsi_formation_strength, analyze_macd_breakout_signal, analyze_volume_pattern, calculate_formation_score, analyze_breakout_candle, calculate_formation_geometric_score, backtest_formation_success_rate, analyze_multiple_timeframes, get_multiple_timeframe_data, format_multitimeframe_analysis_result
 # from bot import format_price  # bot.py dosyası yok, bot_backup.py var
 try:
     import msvcrt
@@ -186,8 +186,28 @@ def analyze_volume_confirmation(symbol, timeframes=['4h', '1d']):
 
 def calculate_signal_score(df, formation_type, formation_data, macd_data, bb_data, stoch_data, adx_data, ma_trend):
     """
-    Sinyal ağırlıklandırma sistemi - Çelişkileri çözer
+    Gelişmiş sinyal ağırlıklandırma sistemi - RSI, MACD ve hacim kriterleri ile
     """
+    # Eğer formation_data'da zaten skorlama varsa, onu kullan
+    if 'total_score' in formation_data and 'score_percentage' in formation_data:
+        # Yeni skorlama sistemi kullanılıyor
+        return {
+            'total_score': formation_data['total_score'],
+            'max_score': formation_data['max_score'],
+            'score_percentage': formation_data['score_percentage'],
+            'final_signal': formation_data['signal_direction'],
+            'confidence': formation_data['confidence'],
+            'signals': formation_data.get('all_signals', []),
+            'formation_signal': formation_data['signal_direction'],
+            'rsi_analysis': formation_data.get('rsi_analysis', {}),
+            'macd_analysis': formation_data.get('macd_analysis', {}),
+            'volume_analysis': formation_data.get('volume_analysis', {}),
+            'long_percentage': formation_data['score_percentage'] if formation_data['signal_direction'] == 'Long' else 0,
+            'short_percentage': formation_data['score_percentage'] if formation_data['signal_direction'] == 'Short' else 0,
+            'conflict': 'Düşük Çelişki' if formation_data['score_percentage'] > 65 else 'Orta Çelişki' if formation_data['score_percentage'] > 50 else 'Yüksek Çelişki'
+        }
+    
+    # Eski sistem (geriye uyumluluk için)
     total_score = 0
     max_score = 100
     signals = []
@@ -1204,8 +1224,17 @@ def main():
                 current_price = get_current_price(symbol)
                 if not current_price:
                     return None
-                    
-                df = fetch_ohlcv(symbol, interval)
+                
+                # Çoklu zaman dilimi verisi çek
+                df_dict = get_multiple_timeframe_data(symbol, ['1h', '4h', '1d', '1w'])
+                
+                # En az 2 zaman diliminde veri olmalı
+                valid_timeframes = [tf for tf, df in df_dict.items() if df is not None and not df.empty]
+                if len(valid_timeframes) < 2:
+                    return None
+                
+                # Ana analiz için 4h verisini kullan
+                df = df_dict.get('4h')
                 if df is None or df.empty:
                     return None
                 
@@ -1238,7 +1267,13 @@ def main():
                     formation_score = formation_signal['score']
                     formation_confidence = formation_signal['confidence']
                     
-                    # Formasyon logları kaldırıldı - Railway log limit için
+                    # Çoklu zaman dilimi analizi
+                    multitimeframe_result = analyze_multiple_timeframes(df_dict, formation_type, symbol)
+                    
+                    # En az 2 zaman diliminde onay varsa işlemi öner
+                    if multitimeframe_result['final_decision']:
+                        # Formasyon logları kaldırıldı - Railway log limit için
+                        pass
 
                 # Flag & Pennant (Bayrak & Flama) formasyonu tespiti
                 flag_signal = detect_bullish_bearish_flag_advanced(df)
