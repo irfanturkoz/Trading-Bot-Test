@@ -105,8 +105,8 @@ def run_bot():
             print("⚠️ Bot çalışmayacak, sadece admin panel aktif olacak")
         
         # Conflict kontrolü için daha uzun bekle
-        print("⏳ 15 saniye bekleniyor (conflict önleme)...")
-        time.sleep(15)
+        print("⏳ 20 saniye bekleniyor (conflict önleme)...")
+        time.sleep(20)
         
         # telegram_bot.py'yi import et ve main() fonksiyonunu çalıştır
         print("📦 telegram_bot.py import ediliyor...")
@@ -1251,9 +1251,21 @@ def send_broadcast():
 if __name__ == '__main__':
     print("🚀 Admin Panel başlatılıyor...")
     
-    # Railway için port ayarları
-    port = int(os.environ.get('PORT', 5000))
-    print(f"🌐 Admin Panel: http://0.0.0.0:{port}/admin")
+    # Railway URL'lerini kontrol et
+    railway_public_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN')
+    railway_static_url = os.getenv('RAILWAY_STATIC_URL')
+    
+    if railway_public_domain:
+        print(f"🌐 Railway Admin Panel: https://{railway_public_domain}/admin")
+    elif railway_static_url:
+        print(f"🌐 Railway Admin Panel: https://{railway_static_url}/admin")
+    else:
+        # Railway için port ayarları
+        port = int(os.environ.get('PORT', 5000))
+        print(f"🌐 Local Admin Panel: http://0.0.0.0:{port}/admin")
+    
     print("🔐 Şifre: admin123")
     
+    # Railway için port ayarları
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False) 

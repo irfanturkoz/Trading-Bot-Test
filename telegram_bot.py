@@ -888,7 +888,7 @@ def main():
     print("🔄 Manuel tarama sistemi aktif (3 saatte bir)")
     
     # Conflict çözümü için daha güçlü yaklaşım
-    max_retries = 5
+    max_retries = 10  # Increased from 5
     retry_count = 0
     
     while retry_count < max_retries:
@@ -900,10 +900,10 @@ def main():
                 print("🧹 Webhook temizleniyor...")
                 bot.remove_webhook()
                 print("✅ Webhook temizlendi")
-                time.sleep(5)  # Daha uzun bekle
+                time.sleep(10)  # Increased from 5
             except Exception as webhook_error:
                 print(f"⚠️ Webhook temizleme hatası: {webhook_error}")
-                time.sleep(3)
+                time.sleep(5) # Increased from 3
             
             # Bot bağlantısını test et
             try:
@@ -915,14 +915,14 @@ def main():
             except Exception as e:
                 if "Conflict" in str(e) or "409" in str(e):
                     print(f"⚠️ Bot çakışması tespit edildi! (Deneme {retry_count + 1}/{max_retries})")
-                    print("🔄 120 saniye bekleniyor...")
-                    time.sleep(120)  # Daha uzun bekle
+                    print("🔄 180 saniye bekleniyor...") # Increased from 120
+                    time.sleep(180)  # Increased from 120
                     retry_count += 1
                     continue
                 else:
                     print(f"❌ Bot bağlantı hatası: {e}")
                     retry_count += 1
-                    time.sleep(30)
+                    time.sleep(60) # Increased from 30
                     continue
             
             # Bot'u başlat
@@ -939,11 +939,11 @@ def main():
                 retry_count += 1
                 if retry_count < max_retries:
                     print(f"⚠️ Conflict hatası! Yeniden deneniyor... (Deneme {retry_count}/{max_retries})")
-                    print("🔄 120 saniye bekleniyor...")
-                    time.sleep(120)  # Daha uzun bekle
+                    print("🔄 180 saniye bekleniyor...") # Increased from 120
+                    time.sleep(180)  # Increased from 120
                     try:
                         bot.remove_webhook()
-                        time.sleep(10)
+                        time.sleep(15) # Increased from 10
                     except:
                         pass
                 else:
