@@ -533,7 +533,8 @@ def perform_scan():
         # botanlik.py'nin get_scan_results fonksiyonunu çağır
         scan_results = get_scan_results()
         
-        # print(f"📊 get_scan_results() sonucu: {scan_results}")
+        print(f"📊 get_scan_results() sonucu: {scan_results}")
+        print(f"📊 Opportunities sayısı: {len(scan_results.get('opportunities', [])) if scan_results else 0}")
         
         if scan_results:
             # Tarama süresini hesapla
@@ -559,7 +560,11 @@ def perform_scan():
 
 def send_scan_results_to_user(user_id, results):
     """Kullanıcıya tarama sonuçlarını gönder"""
+    print(f"📤 send_scan_results_to_user çağrıldı: user_id={user_id}")
+    print(f"📊 Results: {results}")
+    
     if not results:
+        print("❌ Results boş, mesaj gönderilmeyecek")
         return
     
     message = f"""
