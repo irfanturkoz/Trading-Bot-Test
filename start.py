@@ -305,7 +305,8 @@ def handle_all_messages(message):
     license_data = check_user_license(user_id)
     
     if not license_data:
-        # Lisans yoksa lisans anahtarı iste
+        # Lisans yoksa lisans anahtarı iste ve user_states'i ayarla
+        user_states[user_id] = "waiting_license"
         bot.reply_to(message, "🔑 **Lisans Anahtarınızı Gönderin:**\n\nLisans anahtarınızı buraya yazın.\n\n💬 **Lisans Satın Almak İçin:** @ApfelTradingAdmin")
     else:
         # Lisans varsa yardım mesajı
