@@ -20,5 +20,5 @@ COPY . .
 # Port ayarı
 EXPOSE 8080
 
-# Token test et
-CMD ["python", "test_railway_token.py"] 
+# Uygulamayı çalıştır
+CMD ["python", "start.py"] 
