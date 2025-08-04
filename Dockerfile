@@ -20,5 +20,5 @@ COPY . .
 # Port ayarı
 EXPOSE 8080
 
-# Uygulamayı çalıştır
-CMD ["python", "start.py"] 
+# Test yeni bot
+CMD ["python", "test_new_bot.py"] 
