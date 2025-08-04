@@ -14,32 +14,9 @@ load_dotenv()
 # Flask app
 app = Flask(__name__)
 
-# Bot token'ını al
-BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-print(f"🔍 Token kontrol ediliyor: {BOT_TOKEN[:20] if BOT_TOKEN else 'None'}...")
-
-if not BOT_TOKEN:
-    print("❌ TELEGRAM_BOT_TOKEN bulunamadı!")
-    exit(1)
-
-# Token'ı test et
-try:
-    import requests
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/getMe"
-    response = requests.get(url)
-    
-    if response.status_code == 200:
-        print("✅ Token geçerli!")
-        data = response.json()
-        print(f"🤖 Bot: @{data['result']['username']}")
-    else:
-        print(f"❌ Token geçersiz! Status: {response.status_code}")
-        print(f"📝 Response: {response.text}")
-        exit(1)
-        
-except Exception as e:
-    print(f"❌ Token test hatası: {e}")
-    exit(1)
+# Bot token'ını al - Railway'deki environment variable sorunlu, doğrudan kullan
+BOT_TOKEN = "8243806452:AAErJkMJ9yDEL3IDGFN_ayQHnXQhHkiA-YE"
+print(f"🔍 Token kullanılıyor: {BOT_TOKEN[:20]}...")
 
 # Bot'u oluştur
 bot = telebot.TeleBot(BOT_TOKEN)
