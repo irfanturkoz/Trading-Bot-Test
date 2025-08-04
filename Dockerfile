@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Uygulamayı çalıştır
-CMD ["sh", "-c", "pkill -f python && sleep 5 && python start.py"] 
+CMD ["sh", "-c", "ps aux | grep python | grep -v grep | awk '{print $2}' | xargs -r kill -9 && sleep 5 && python start.py"] 
