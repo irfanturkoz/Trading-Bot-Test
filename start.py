@@ -532,9 +532,6 @@ def perform_scan():
         # botanlik.py'nin get_scan_results fonksiyonunu çağır
         scan_results = get_scan_results()
         
-        print(f"📊 get_scan_results() sonucu: {scan_results}")
-        print(f"📊 Opportunities sayısı: {len(scan_results.get('opportunities', [])) if scan_results else 0}")
-        
         if scan_results:
             # Tarama süresini hesapla
             scan_time = time.time() - start_time
@@ -560,7 +557,6 @@ def perform_scan():
 def send_scan_results_to_user(user_id, results):
     """Kullanıcıya tarama sonuçlarını gönder"""
     print(f"📤 send_scan_results_to_user çağrıldı: user_id={user_id}")
-    print(f"📊 Results: {results}")
     
     if not results:
         print("❌ Results boş, mesaj gönderilmeyecek")
@@ -580,7 +576,6 @@ def send_scan_results_to_user(user_id, results):
     
     try:
         bot.send_message(user_id, general_message, parse_mode='Markdown')
-        print(f"✅ Genel bilgiler gönderildi")
     except Exception as e:
         print(f"❌ Genel bilgiler gönderilemedi: {e}")
         return
@@ -877,7 +872,7 @@ def add_license():
             json.dump(licenses, f, indent=2)
         
         # Log'u azalt - sadece başarılı olduğunda kısa mesaj
-        print(f"✅ Lisans eklendi: {key}")
+        print(f"✅ Lisans eklendi: {key[:8]}...")
         
         return jsonify({'success': True, 'message': 'Lisans eklendi'})
     except Exception as e:
@@ -923,25 +918,31 @@ def run_telegram_bot():
     try:
         print("📱 Bot polling başlatılıyor...")
         # Offset'i sıfırla ve daha kısa timeout kullan
-        bot.get_updates(offset=-1)  # Tüm eski mesajları temizle
+        try:
+            bot.get_updates(offset=-1)  # Tüm eski mesajları temizle
+        except Exception as clear_error:
+            print(f"⚠️ Mesaj temizleme hatası (normal): {clear_error}")
         
         # Daha güvenli polling ayarları
         bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
-        import traceback
-        print(f"🔍 Detaylı hata: {traceback.format_exc()}")
         
-        # Hata durumunda tekrar dene
-        import time
-        time.sleep(3)
-        try:
-            print("🔄 Bot polling tekrar deneniyor...")
-            bot.get_updates(offset=-1)  # Tekrar temizle
-            bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
-        except Exception as e2:
-            print(f"❌ İkinci deneme de başarısız: {e2}")
-            print(f"🔍 İkinci hata detayı: {traceback.format_exc()}")
+        # 409 Conflict hatası için özel işlem
+        if "409" in str(e) or "Conflict" in str(e):
+            print("🔄 409 Conflict hatası - 10 saniye bekleyip tekrar deniyorum...")
+            import time
+            time.sleep(10)
+            
+            try:
+                print("🔄 İkinci deneme başlatılıyor...")
+                bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
+            except Exception as e2:
+                print(f"❌ İkinci deneme de başarısız: {e2}")
+                print("💡 Railway'de başka bir bot instance'ı çalışıyor olabilir.")
+        else:
+            import traceback
+            print(f"🔍 Detaylı hata: {traceback.format_exc()}")
 
 def main():
     """Ana fonksiyon - hem Flask hem Telegram botu çalıştır"""

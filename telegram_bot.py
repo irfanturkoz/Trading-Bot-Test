@@ -137,7 +137,7 @@ def main():
     print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
     
     try:
-        # Bot'u başlat
+            # Bot'u başlat
         bot.polling(none_stop=True, interval=0)
         except Exception as e:
             print(f"❌ Bot hatası: {e}")
