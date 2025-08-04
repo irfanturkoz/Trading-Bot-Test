@@ -197,10 +197,16 @@ def help_command(message):
 🔍 **/scan:** Otomatik coin taraması başlatır
 📊 **/status:** Mevcut lisans bilgilerini gösterir
 🔑 **Lisans Anahtarı Gir:** Yeni lisans anahtarı girmenizi sağlar
+🧪 **/test:** Bot test komutu
 
 💬 **Destek:** @ApfelTradingAdmin
 """
     bot.reply_to(message, help_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['test'])
+def test_command(message):
+    """Test komutu"""
+    bot.reply_to(message, "✅ Bot çalışıyor! Test başarılı!")
 
 @bot.message_handler(func=lambda message: user_states.get(message.from_user.id) == "waiting_license")
 def handle_license_input(message):
@@ -330,10 +336,11 @@ def save_user_license(user_id, license_info):
         with open(f"{storage_dir}/user_{user_id}.json", 'w') as f:
             json.dump(license_data, f, indent=2)
             
-        print(f"✅ Lisans kaydedildi: user_{user_id}.json")
+        # Log'u azalt - sadece hata durumunda
+        # print(f"✅ Lisans kaydedildi: user_{user_id}.json")
             
     except Exception as e:
-        print(f"Lisans kaydedilemedi: {e}")
+        print(f"❌ Lisans kaydedilemedi: {e}")
 
 def check_user_license(user_id):
     """Kullanıcının lisans durumunu kontrol eder"""
@@ -357,12 +364,13 @@ def check_user_license(user_id):
                     # Lisans hala mevcut ve aktif mi?
                     if license_key not in licenses or not licenses[license_key].get('active', True):
                         # Lisans silinmiş veya pasif yapılmış
-                        print(f"❌ Lisans {license_key} silinmiş veya pasif: {user_id}")
+                        # print(f"❌ Lisans {license_key} silinmiş veya pasif: {user_id}")
                         # Kullanıcı dosyasını sil
                         os.remove(license_file)
                         return None
                 except Exception as e:
-                    print(f"Lisans dosyası kontrol hatası: {e}")
+                    # print(f"Lisans dosyası kontrol hatası: {e}")
+                    pass
             
             # Lisans süresini kontrol et
             expiry_date = user_license.get('expiry_date')
@@ -370,7 +378,7 @@ def check_user_license(user_id):
                 from datetime import datetime
                 expiry = datetime.fromisoformat(expiry_date)
                 if datetime.now() > expiry:
-                    print(f"❌ Lisans süresi dolmuş: {user_id}")
+                    # print(f"❌ Lisans süresi dolmuş: {user_id}")
                     # Kullanıcı dosyasını sil
                     os.remove(license_file)
                     return None
@@ -510,23 +518,22 @@ def perform_scan():
         # Tarama başlangıç zamanı
         start_time = time.time()
         
-        print("🔍 botanlik.py ile gerçek analiz başlatılıyor...")
+        # print("🔍 botanlik.py ile gerçek analiz başlatılıyor...")
         
         try:
             # botanlik.py'den get_scan_results fonksiyonunu import et
             from botanlik import get_scan_results
-            print("✅ botanlik.py import başarılı")
+            # print("✅ botanlik.py import başarılı")
         except Exception as import_error:
             print(f"❌ Import hatası: {import_error}")
-            print(f"🔍 Traceback: {traceback.format_exc()}")
             return None
         
-        print("🚀 get_scan_results() fonksiyonu çağrılıyor...")
+        # print("🚀 get_scan_results() fonksiyonu çağrılıyor...")
         
         # botanlik.py'nin get_scan_results fonksiyonunu çağır
         scan_results = get_scan_results()
         
-        print(f"📊 get_scan_results() sonucu: {scan_results}")
+        # print(f"📊 get_scan_results() sonucu: {scan_results}")
         
         if scan_results:
             # Tarama süresini hesapla
@@ -534,8 +541,7 @@ def perform_scan():
             scan_time_minutes = int(scan_time // 60)
             scan_time_seconds = int(scan_time % 60)
             
-            print(f"⏱️ Tarama süresi: {scan_time_minutes} dakika {scan_time_seconds} saniye")
-            print(f"📈 Bulunan fırsat sayısı: {len(scan_results.get('opportunities', []))}")
+            print(f"⏱️ Tarama tamamlandı: {scan_time_minutes}dk {scan_time_seconds}s - {len(scan_results.get('opportunities', []))} fırsat")
             
             # Sonuçları formatla
             return {
@@ -544,12 +550,11 @@ def perform_scan():
                 "scan_time": f"{scan_time_minutes} dakika {scan_time_seconds} saniye"
             }
         else:
-            print("❌ botanlik.py'den sonuç alınamadı")
+            print("❌ Tarama sonucu alınamadı")
             return None
             
     except Exception as e:
         print(f"❌ Tarama hatası: {e}")
-        print(f"🔍 Detaylı hata: {traceback.format_exc()}")
         return None
 
 def send_scan_results_to_user(user_id, results):
@@ -883,6 +888,9 @@ def add_license():
         with open('licenses.json', 'w') as f:
             json.dump(licenses, f, indent=2)
         
+        # Log'u azalt - sadece başarılı olduğunda kısa mesaj
+        print(f"✅ Lisans eklendi: {key}")
+        
         return jsonify({'success': True, 'message': 'Lisans eklendi'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -925,31 +933,35 @@ def run_telegram_bot():
     
     try:
         print("📱 Bot polling başlatılıyor...")
-        bot.polling(none_stop=True, interval=0, timeout=60)
+        # Daha basit polling ayarları
+        bot.polling(none_stop=True, interval=1, timeout=20)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
+        import traceback
+        print(f"🔍 Detaylı hata: {traceback.format_exc()}")
+        
         # Hata durumunda tekrar dene
         import time
-        time.sleep(5)
+        time.sleep(3)
         try:
-            bot.polling(none_stop=True, interval=0, timeout=60)
+            print("🔄 Bot polling tekrar deneniyor...")
+            bot.polling(none_stop=True, interval=1, timeout=20)
         except Exception as e2:
             print(f"❌ İkinci deneme de başarısız: {e2}")
+            print(f"🔍 İkinci hata detayı: {traceback.format_exc()}")
 
 def main():
     """Ana fonksiyon - hem Flask hem Telegram botu çalıştır"""
     print("🚀 Botanlik Bot başlatılıyor...")
-    print("📱 Telegram Bot: Aktif")
-    print("🌐 Admin Panel: Aktif")
-    print("🔑 Lisans Sistemi: Aktif")
+    print("📱 Telegram Bot + 🌐 Admin Panel aktif")
     
-    # Telegram botunu ayrı thread'de başlat
-    bot_thread = threading.Thread(target=run_telegram_bot)
-    bot_thread.daemon = True
-    bot_thread.start()
+    # Flask'i ayrı thread'de başlat
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
     
-    # Flask'i ana thread'de çalıştır
-    run_flask()
+    # Telegram botunu ana thread'de çalıştır
+    run_telegram_bot()
 
 if __name__ == "__main__":
     main() 
