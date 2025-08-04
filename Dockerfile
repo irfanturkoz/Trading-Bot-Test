@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Uygulamayı çalıştır
-CMD ["python", "start.py"] 
+CMD ["sh", "-c", "pkill -f python && sleep 5 && python start.py"] 
