@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Uygulamayı çalıştır
-CMD ["python", "start.py"] 
+CMD ["python", "test_token_final.py"] 
