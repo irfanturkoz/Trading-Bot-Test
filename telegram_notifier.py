@@ -8,10 +8,16 @@ load_dotenv()
 
 # Bot token'ını environment variable'dan al
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-if not TELEGRAM_BOT_TOKEN:
-    print("❌ TELEGRAM_BOT_TOKEN environment variable bulunamadı!")
-    print("💡 .env dosyası oluşturun ve TELEGRAM_BOT_TOKEN ekleyin")
-    raise ValueError("Bot token bulunamadı!")
+
+# Environment variable varsa kontrol et, yoksa veya yanlışsa hardcoded kullan
+if not TELEGRAM_BOT_TOKEN or "AAGSkI5VI" in TELEGRAM_BOT_TOKEN:
+    # Hardcoded token kullan (start.py ile aynı)
+    TELEGRAM_BOT_TOKEN = "8243806452:AAErJkMJ9yDEL3IDGFN_ayQHnXQhHkiA-YE"
+    print("⚠️ Environment variable bulunamadı veya yanlış, hardcoded token kullanılıyor")
+else:
+    print("✅ Bot token environment variable'dan yüklendi")
+
+print(f"🔍 Kullanılan Bot Token: {TELEGRAM_BOT_TOKEN[:20]}...")
 
 print("✅ Notifier: Bot token environment variable'dan yüklendi")
 
@@ -38,10 +44,19 @@ def send_telegram_message(message, image_path=None, chat_id=None):
     if chat_id is None:
         chat_id = ADMIN_CHAT_ID
     
+    print(f"🔍 Telegram gönderimi başlatılıyor...")
+    print(f"📝 Mesaj uzunluğu: {len(message)} karakter")
+    print(f"📁 Image path: {image_path}")
+    print(f"📁 Dosya var mı: {os.path.exists(image_path) if image_path else 'None'}")
+    print(f"💬 Chat ID: {chat_id}")
+    print(f"🤖 Bot Token: {TELEGRAM_BOT_TOKEN[:10]}...")
+    
     try:
         if image_path and os.path.exists(image_path):
             # Fotoğraflı mesaj gönder
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+            print(f"📤 Fotoğraflı mesaj gönderiliyor: {url}")
+            
             with open(image_path, 'rb') as photo:
                 files = {'photo': photo}
                 data = {
@@ -50,20 +65,40 @@ def send_telegram_message(message, image_path=None, chat_id=None):
                     'parse_mode': 'Markdown'
                 }
                 response = requests.post(url, data=data, files=files)
-                print(f"✅ Fotoğraflı mesaj gönderildi: {image_path}")
-                return response.json()
+                
+                print(f"📡 Response status: {response.status_code}")
+                print(f"📡 Response: {response.text}")
+                
+                if response.status_code == 200:
+                    print(f"✅ Fotoğraflı mesaj gönderildi: {image_path}")
+                    return response.json()
+                else:
+                    print(f"❌ Fotoğraflı mesaj gönderilemedi: {response.status_code}")
+                    return None
         else:
             # Sadece metin mesajı gönder
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            print(f"📤 Metin mesajı gönderiliyor: {url}")
+            
             data = {
                 'chat_id': chat_id,
                 'text': message,
                 'parse_mode': 'Markdown'
             }
             response = requests.post(url, data=data)
-            print(f"✅ Metin mesajı gönderildi")
-            return response.json()
+            
+            print(f"📡 Response status: {response.status_code}")
+            print(f"📡 Response: {response.text}")
+            
+            if response.status_code == 200:
+                print(f"✅ Metin mesajı gönderildi")
+                return response.json()
+            else:
+                print(f"❌ Metin mesajı gönderilemedi: {response.status_code}")
+                return None
             
     except Exception as e:
         print(f"❌ Telegram mesajı gönderilemedi: {e}")
+        import traceback
+        print(f"🔍 Detaylı hata: {traceback.format_exc()}")
         return None 

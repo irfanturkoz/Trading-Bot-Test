@@ -735,7 +735,7 @@ class SignalVisualizer:
             # Telegram mesajı oluştur
             message = self.create_signal_message(symbol, formation_type, entry_price, direction, levels, formation)
             
-            # Telegram'a gönder
+            # Telegram'a gönder - ADMIN_CHAT_ID'ye gönder
             try:
                 send_telegram_message(message, filename)
                 print(f"✅ {formation_type} sinyali Telegram'a gönderildi: {filename}")

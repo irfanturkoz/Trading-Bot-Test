@@ -588,37 +588,65 @@ def send_scan_results_to_user(user_id, results):
             print(f"📊 {i}. fırsat analiz ediliyor: {opp.get('symbol', 'UNKNOWN')}")
             
             # signal_visualizer.py'yi kullanarak detaylı analiz yap
-            from signal_visualizer import visualize_single_formation
+            from signal_visualizer import SignalVisualizer
+            
+            # SignalVisualizer instance'ı oluştur
+            visualizer = SignalVisualizer()
             
             # Formasyon verilerini hazırla
             formation_data = {
-                'symbol': opp.get('symbol', 'UNKNOWN'),
+                'type': opp.get('formasyon', 'Unknown'),
                 'direction': opp.get('yön', 'Unknown'),
-                'formation': opp.get('formasyon', 'Unknown'),
-                'entry_price': opp.get('price', 0),
-                'tp_levels': opp.get('tp_levels', {}),
-                'sl_price': opp.get('sl', 0),
                 'quality_score': opp.get('quality_score', 0),
-                'signal_strength': opp.get('signal_strength', 50),
-                'rr_ratio': opp.get('rr_ratio', 0)
+                'rr_levels': {
+                    'tp1': opp.get('tp1', 0),
+                    'tp2': opp.get('tp2', 0),
+                    'tp3': opp.get('tp3', 0),
+                    'sl': opp.get('sl', 0),
+                    'rr_ratio': opp.get('rr_ratio', 0)
+                }
             }
             
             # Görselleştirme yap
-            chart_path = visualize_single_formation(formation_data)
+            print(f"🎨 {i}. fırsat için görselleştirme başlatılıyor...")
+            success = visualizer.visualize_single_formation(
+                symbol=opp.get('symbol', 'UNKNOWN'),
+                interval='1h',
+                formation=formation_data
+            )
             
-            if chart_path and os.path.exists(chart_path):
-                print(f"📈 Grafik oluşturuldu: {chart_path}")
-                
-                # Grafiği gönder
-                with open(chart_path, 'rb') as photo:
-                    bot.send_photo(user_id, photo, caption=f"📊 {i}. Fırsat: {formation_data['symbol']}")
-                
-                # Grafik dosyasını sil
-                os.remove(chart_path)
-                print(f"🗑️ Geçici grafik silindi: {chart_path}")
-                
+            if success:
+                print(f"✅ Görselleştirme başarılı: {opp.get('symbol', 'UNKNOWN')}")
+                print(f"✅ Grafik zaten SignalVisualizer tarafından gönderildi: {opp.get('symbol', 'UNKNOWN')}")
             else:
-                print(f"❌ Grafik oluşturulamadı: {formation_data['symbol']}")
+                print(f"❌ Görselleştirme başarısız: {opp.get('symbol', 'UNKNOWN')}")
+                
+                # Manuel olarak grafik oluştur ve gönder
+                try:
+                    from signal_visualizer import SignalVisualizer
+                    visualizer = SignalVisualizer()
+                    
+                    # Basit formasyon verisi
+                    simple_formation = {
+                        'type': opp.get('formasyon', 'Unknown'),
+                        'direction': opp.get('yön', 'Unknown'),
+                        'quality_score': opp.get('quality_score', 0)
+                    }
+                    
+                    # Grafik oluştur
+                    success_manual = visualizer.visualize_single_formation(
+                        symbol=opp.get('symbol', 'UNKNOWN'),
+                        interval='1h',
+                        formation=simple_formation
+                    )
+                    
+                    if success_manual:
+                        print(f"✅ Manuel görselleştirme başarılı: {opp.get('symbol', 'UNKNOWN')}")
+                    else:
+                        print(f"❌ Manuel görselleştirme de başarısız: {opp.get('symbol', 'UNKNOWN')}")
+                        
+                except Exception as manual_error:
+                    print(f"❌ Manuel görselleştirme hatası: {manual_error}")
                 
         except Exception as e:
             print(f"❌ {i}. fırsat analiz hatası: {e}")
