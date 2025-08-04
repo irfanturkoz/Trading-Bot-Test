@@ -20,5 +20,5 @@ COPY . .
 # Port ayarı
 EXPOSE 8080
 
-# Debug için önce environment variables'ları kontrol et
-CMD ["python", "debug_env.py"] 
+# Token test et
+CMD ["python", "test_railway_token.py"] 
