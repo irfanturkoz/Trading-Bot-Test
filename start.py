@@ -16,12 +16,34 @@ app = Flask(__name__)
 
 # Bot token'ını al
 BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+print(f"🔍 Token kontrol ediliyor: {BOT_TOKEN[:20] if BOT_TOKEN else 'None'}...")
+
 if not BOT_TOKEN:
     print("❌ TELEGRAM_BOT_TOKEN bulunamadı!")
     exit(1)
 
+# Token'ı test et
+try:
+    import requests
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/getMe"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        print("✅ Token geçerli!")
+        data = response.json()
+        print(f"🤖 Bot: @{data['result']['username']}")
+    else:
+        print(f"❌ Token geçersiz! Status: {response.status_code}")
+        print(f"📝 Response: {response.text}")
+        exit(1)
+        
+except Exception as e:
+    print(f"❌ Token test hatası: {e}")
+    exit(1)
+
 # Bot'u oluştur
 bot = telebot.TeleBot(BOT_TOKEN)
+print("✅ Bot oluşturuldu!")
 
 # Lisans yöneticisi
 license_manager = LicenseManager()
@@ -922,8 +944,8 @@ def run_telegram_bot():
     
     try:
         print("📱 Bot polling başlatılıyor...")
-        # Daha basit polling ayarları
-        bot.polling(none_stop=True, interval=1, timeout=20)
+        # Daha güvenli polling ayarları
+        bot.polling(none_stop=True, interval=3, timeout=30, long_polling_timeout=30)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         import traceback
@@ -931,10 +953,10 @@ def run_telegram_bot():
         
         # Hata durumunda tekrar dene
         import time
-        time.sleep(3)
+        time.sleep(5)
         try:
             print("🔄 Bot polling tekrar deneniyor...")
-            bot.polling(none_stop=True, interval=1, timeout=20)
+            bot.polling(none_stop=True, interval=3, timeout=30, long_polling_timeout=30)
         except Exception as e2:
             print(f"❌ İkinci deneme de başarısız: {e2}")
             print(f"🔍 İkinci hata detayı: {traceback.format_exc()}")

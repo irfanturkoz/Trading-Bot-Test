@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Uygulamayı çalıştır
-CMD ["python", "debug_token.py"] 
+CMD ["python", "start.py"] 
