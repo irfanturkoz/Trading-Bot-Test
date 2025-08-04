@@ -924,9 +924,17 @@ def run_telegram_bot():
     print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
     
     try:
-        bot.polling(none_stop=True, interval=0)
+        print("📱 Bot polling başlatılıyor...")
+        bot.polling(none_stop=True, interval=0, timeout=60)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
+        # Hata durumunda tekrar dene
+        import time
+        time.sleep(5)
+        try:
+            bot.polling(none_stop=True, interval=0, timeout=60)
+        except Exception as e2:
+            print(f"❌ İkinci deneme de başarısız: {e2}")
 
 def main():
     """Ana fonksiyon - hem Flask hem Telegram botu çalıştır"""
@@ -935,13 +943,13 @@ def main():
     print("🌐 Admin Panel: Aktif")
     print("🔑 Lisans Sistemi: Aktif")
     
-    # Flask'i ayrı thread'de başlat
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
+    # Telegram botunu ayrı thread'de başlat
+    bot_thread = threading.Thread(target=run_telegram_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
     
-    # Telegram botunu ana thread'de çalıştır
-    run_telegram_bot()
+    # Flask'i ana thread'de çalıştır
+    run_flask()
 
 if __name__ == "__main__":
     main() 
