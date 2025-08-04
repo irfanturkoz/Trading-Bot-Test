@@ -920,6 +920,7 @@ def run_telegram_bot():
         
         # Webhook kullanarak polling'i başlat
         bot.remove_webhook()
+        import time
         time.sleep(1)
         
         # Daha güvenli polling ayarları
@@ -936,6 +937,7 @@ def run_telegram_bot():
             try:
                 print("🔄 İkinci deneme başlatılıyor...")
                 bot.remove_webhook()
+                import time
                 time.sleep(1)
                 bot.polling(none_stop=True, interval=3, timeout=20, long_polling_timeout=20)
             except Exception as e2:
