@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 import threading
 import time
-from botanlik import main as bot_main
+import os
 
 app = Flask(__name__)
 
@@ -19,6 +19,8 @@ def run_bot():
     bot_status["message"] = "Bot çalışıyor..."
     
     try:
+        # Bot'u import et ve çalıştır
+        from botanlik import main as bot_main
         bot_main()
     except Exception as e:
         bot_status["message"] = f"Bot hatası: {str(e)}"
@@ -30,7 +32,8 @@ def run_bot():
 def home():
     return jsonify({
         "status": "Bot API çalışıyor",
-        "bot_status": bot_status
+        "bot_status": bot_status,
+        "instructions": "Bot'u başlatmak için /start endpoint'ini kullan"
     })
 
 @app.route('/start')
@@ -47,11 +50,11 @@ def start_bot():
 def get_status():
     return jsonify(bot_status)
 
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": time.time()})
+
 if __name__ == '__main__':
-    # Bot'u otomatik başlat
-    thread = threading.Thread(target=run_bot)
-    thread.daemon = True
-    thread.start()
-    
-    # Flask uygulamasını başlat
-    app.run(host='0.0.0.0', port=8080, debug=False) 
+    # Sadece Flask uygulamasını başlat, bot'u otomatik başlatma
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False) 

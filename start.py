@@ -1,12 +1,15 @@
-import telebot
-import os
-from dotenv import load_dotenv
-from botanlik import main as bot_main
 import threading
 import time
+import os
+from flask import Flask, jsonify
+import telebot
+from dotenv import load_dotenv
 
 # .env dosyasını yükle
 load_dotenv()
+
+# Flask app
+app = Flask(__name__)
 
 # Bot token'ını al
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -31,6 +34,7 @@ def run_bot_analysis():
     bot_status["message"] = "Bot analizi çalışıyor..."
     
     try:
+        from botanlik import main as bot_main
         bot_main()
     except Exception as e:
         bot_status["message"] = f"Bot hatası: {str(e)}"
@@ -38,6 +42,7 @@ def run_bot_analysis():
         bot_status["running"] = False
         bot_status["last_run"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
+# Telegram bot komutları
 @bot.message_handler(commands=['start'])
 def start_command(message):
     """Bot'u başlat"""
@@ -131,16 +136,66 @@ def echo_all(message):
     """Bilinmeyen komutlar için"""
     bot.reply_to(message, "❓ Bilinmeyen komut. /help yazarak komutları görebilirsiniz.")
 
-def main():
-    """Ana fonksiyon"""
+# Flask routes
+@app.route('/')
+def home():
+    return jsonify({
+        "status": "Botanlik Bot API çalışıyor",
+        "bot_status": bot_status,
+        "endpoints": {
+            "/": "Ana sayfa",
+            "/status": "Bot durumu",
+            "/start": "Bot'u başlat",
+            "/health": "Sağlık kontrolü"
+        }
+    })
+
+@app.route('/status')
+def get_status():
+    return jsonify(bot_status)
+
+@app.route('/start')
+def start_bot():
+    if not bot_status["running"]:
+        thread = threading.Thread(target=run_bot_analysis)
+        thread.daemon = True
+        thread.start()
+        return jsonify({"message": "Bot başlatıldı", "status": "success"})
+    else:
+        return jsonify({"message": "Bot zaten çalışıyor", "status": "already_running"})
+
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": time.time()})
+
+def run_flask():
+    """Flask uygulamasını çalıştır"""
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)
+
+def run_telegram_bot():
+    """Telegram botunu çalıştır"""
     print("🚀 Telegram Bot başlatılıyor...")
     print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
     
     try:
-        # Bot'u başlat
         bot.polling(none_stop=True, interval=0)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
+
+def main():
+    """Ana fonksiyon - hem Flask hem Telegram botu çalıştır"""
+    print("🚀 Botanlik Bot başlatılıyor...")
+    print("📱 Telegram Bot: Aktif")
+    print("🌐 Admin Panel: Aktif")
+    
+    # Flask'i ayrı thread'de başlat
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    # Telegram botunu ana thread'de çalıştır
+    run_telegram_bot()
 
 if __name__ == "__main__":
     main() 

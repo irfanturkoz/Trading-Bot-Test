@@ -22,6 +22,13 @@ from typing import Dict, List, Tuple, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
+# Matplotlib font ayarları - Railway için
+import matplotlib
+matplotlib.use('Agg')  # GUI olmadan çalış
+plt.rcParams['font.family'] = 'DejaVu Sans'  # Linux'ta mevcut font
+plt.rcParams['font.size'] = 10
+plt.rcParams['axes.unicode_minus'] = False
+
 # Local imports
 from data_fetcher import fetch_ohlcv
 from formation_detector import (
