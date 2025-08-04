@@ -664,9 +664,45 @@ def send_scan_results_to_user(user_id, results):
 """
     
     try:
-        bot.send_message(user_id, message, parse_mode='Markdown')
+        print(f"📤 Mesaj gönderiliyor...")
+        print(f"📝 Mesaj uzunluğu: {len(message)} karakter")
+        
+        # Mesajı parçalara böl (Telegram 4096 karakter limiti)
+        if len(message) > 4000:
+            print(f"⚠️ Mesaj çok uzun, parçalara bölünüyor...")
+            parts = []
+            current_part = ""
+            
+            for line in message.split('\n'):
+                if len(current_part + line + '\n') > 4000:
+                    if current_part:
+                        parts.append(current_part)
+                    current_part = line + '\n'
+                else:
+                    current_part += line + '\n'
+            
+            if current_part:
+                parts.append(current_part)
+            
+            for i, part in enumerate(parts, 1):
+                print(f"📤 Parça {i}/{len(parts)} gönderiliyor...")
+                bot.send_message(user_id, part, parse_mode='Markdown')
+        else:
+            bot.send_message(user_id, message, parse_mode='Markdown')
+            
+        print(f"✅ Mesaj başarıyla gönderildi!")
+        
     except Exception as e:
-        print(f"Kullanıcı {user_id} için mesaj gönderilemedi: {e}")
+        print(f"❌ Kullanıcı {user_id} için mesaj gönderilemedi: {e}")
+        print(f"🔍 Hata detayı: {type(e).__name__}")
+        
+        # Markdown hatası varsa düz metin olarak gönder
+        try:
+            print(f"🔄 Markdown olmadan tekrar deneniyor...")
+            bot.send_message(user_id, message)
+            print(f"✅ Düz metin olarak gönderildi!")
+        except Exception as e2:
+            print(f"❌ Düz metin de gönderilemedi: {e2}")
 
 # Flask routes
 @app.route('/')
