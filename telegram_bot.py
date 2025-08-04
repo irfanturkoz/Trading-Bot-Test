@@ -44,7 +44,7 @@ def start_command(message):
     user_id = message.from_user.id
     username = message.from_user.username or "Bilinmeyen"
     
-    welcome_text = f"""
+        welcome_text = f"""
 🚀 **Botanlik Bot Hoş Geldin!**
 
 👤 **Kullanıcı:** @{username}
@@ -66,13 +66,13 @@ def start_command(message):
 @bot.message_handler(commands=['status'])
 def status_command(message):
     """Bot durumunu göster"""
-    status_text = f"""
+        status_text = f"""
 📊 **Bot Durumu:**
 
 🔄 **Çalışma Durumu:** {'✅ Çalışıyor' if bot_status["running"] else '❌ Durdu'}
 ⏰ **Son Çalışma:** {bot_status["last_run"] or "Henüz çalışmadı"}
 📝 **Mesaj:** {bot_status["message"]}
-    """
+"""
     
     bot.reply_to(message, status_text, parse_mode='Markdown')
 
@@ -139,8 +139,8 @@ def main():
     try:
         # Bot'u başlat
         bot.polling(none_stop=True, interval=0)
-    except Exception as e:
-        print(f"❌ Bot hatası: {e}")
+        except Exception as e:
+            print(f"❌ Bot hatası: {e}")
 
 if __name__ == "__main__":
     main() 

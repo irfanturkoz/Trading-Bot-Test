@@ -919,10 +919,14 @@ def run_telegram_bot():
     print("🚀 Telegram Bot başlatılıyor...")
     print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
     
+    # 409 Conflict hatası için özel ayarlar
     try:
         print("📱 Bot polling başlatılıyor...")
+        # Offset'i sıfırla ve daha kısa timeout kullan
+        bot.get_updates(offset=-1)  # Tüm eski mesajları temizle
+        
         # Daha güvenli polling ayarları
-        bot.polling(none_stop=True, interval=3, timeout=30, long_polling_timeout=30)
+        bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         import traceback
@@ -930,10 +934,11 @@ def run_telegram_bot():
         
         # Hata durumunda tekrar dene
         import time
-        time.sleep(5)
+        time.sleep(3)
         try:
             print("🔄 Bot polling tekrar deneniyor...")
-            bot.polling(none_stop=True, interval=3, timeout=30, long_polling_timeout=30)
+            bot.get_updates(offset=-1)  # Tekrar temizle
+            bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
         except Exception as e2:
             print(f"❌ İkinci deneme de başarısız: {e2}")
             print(f"🔍 İkinci hata detayı: {traceback.format_exc()}")
