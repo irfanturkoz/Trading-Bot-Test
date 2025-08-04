@@ -9,9 +9,9 @@ import time
 load_dotenv()
 
 # Bot token'ını al
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not BOT_TOKEN:
-    print("❌ BOT_TOKEN bulunamadı!")
+    print("❌ TELEGRAM_BOT_TOKEN bulunamadı!")
     exit(1)
 
 # Bot'u oluştur
