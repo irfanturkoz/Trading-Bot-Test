@@ -567,7 +567,8 @@ def send_scan_results_to_user(user_id, results):
         print("❌ Results boş, mesaj gönderilmeyecek")
         return
     
-    message = f"""
+    # Önce genel bilgileri gönder
+    general_message = f"""
 🎯 **Otomatik Tarama Sonuçları**
 
 📊 **Genel Bilgiler:**
@@ -575,134 +576,81 @@ def send_scan_results_to_user(user_id, results):
 • Bulunan Fırsat: {len(results['opportunities'])}
 • Tarama Süresi: {results['scan_time']}
 
-🚨 **En İyi Fırsatlar:**
-"""
-    
-    for i, opp in enumerate(results['opportunities'][:10], 1):
-        # botanlik2.py formatından veri al
-        symbol = opp.get('symbol', 'UNKNOWN')
-        direction = opp.get('yön', 'Unknown')
-        formation = opp.get('formasyon', 'Unknown')
-        price = opp.get('price', 0)
-        tp = opp.get('tp', 0)
-        sl = opp.get('sl', 0)
-        tpfark = opp.get('tpfark', 0)
-        risk_analysis = opp.get('risk_analysis', {})
-        signal_strength = opp.get('signal_strength', 50)
-        rr_ratio = opp.get('rr_ratio', 0)
-        
-        # Fiyat formatlaması
-        def format_price_display(price):
-            if price == 0:
-                return '0'
-            elif price < 0.0001:
-                return f"{price:.8f}"
-            elif price < 1:
-                return f"{price:.6f}"
-            elif price < 10:
-                return f"{price:.4f}"
-            elif price < 100:
-                return f"{price:.3f}"
-            else:
-                return f"{price:.2f}"
-        
-        price_str = format_price_display(price)
-        tp_str = format_price_display(tp)
-        sl_str = format_price_display(sl)
-        
-        # Risk analizi - Sabit 5x kaldıraç
-        leverage = '5x'  # Sabit 5x kaldıraç
-        position_size = risk_analysis.get('position_size', 'Kasanın %5\'i')
-        potential_gain = risk_analysis.get('potential_gain', '%0.0')
-        risk_amount = risk_analysis.get('risk_amount', '%0.0')
-        max_loss = risk_analysis.get('max_loss', '%0.0')
-        
-        # R/R oranını botanlik2.py'den al, yoksa hesapla
-        if 'rr_ratio' in opp:
-            rr_ratio = opp['rr_ratio']
-            risk_reward = f"{rr_ratio:.1f}:1"
-        else:
-            risk_reward = risk_analysis.get('risk_reward', '0.0:1')
-        
-        # Sinyal gücü emoji
-        if signal_strength >= 80:
-            strength_emoji = "🔥"
-            strength_text = "ÇOK GÜÇLÜ"
-        elif signal_strength >= 70:
-            strength_emoji = "⚡"
-            strength_text = "GÜÇLÜ"
-        elif signal_strength >= 60:
-            strength_emoji = "📊"
-            strength_text = "ORTA"
-        else:
-            strength_emoji = "📈"
-            strength_text = "ZAYIF"
-        
-        # TP seviyeleri varsa göster
-        tp_levels_text = ""
-        if 'tp_levels' in opp and opp['tp_levels']:
-            tp_levels = opp['tp_levels']
-            tp_levels_text = f"""
-   🎯 3 TP SEVİYESİ:
-      TP1 (İlk Kâr): {format_price_display(tp_levels.get('tp1', tp))} | +%{tpfark*100:.1f}
-      TP2 (Orta Kâr): {format_price_display(tp_levels.get('tp2', tp))} | +%{(tp_levels.get('tp2', tp)/price-1)*100:.1f}
-      TP3 (Maksimum): {format_price_display(tp_levels.get('tp3', tp))} | +%{(tp_levels.get('tp3', tp)/price-1)*100:.1f}"""
-        
-        message += f"""
-{i}. **{symbol}** - {direction} ({formation})
-   💰 Fiyat: {price_str} | TP: {tp_str} | SL: {sl_str}
-   📊 Potansiyel: %{tpfark*100:.2f} | R/R: {risk_reward} ✅
-   ⚡ Kaldıraç: {leverage} | Pozisyon: {position_size}
-   🎯 Hedef: {potential_gain} | Risk: {risk_amount}
-   🔒 Margin: ISOLATED | Max Kayıp: {max_loss}{tp_levels_text}
-   {strength_emoji} Sinyal Gücü: {strength_text} (%{signal_strength})
-   ✅ FUTURES İŞLEM AÇILABİLİR!
-"""
-    
-    message += """
-📱 **Detaylı analiz için @ApfelTradingAdmin ile iletişime geçin!**
+🚨 **En İyi 3 Fırsat Detaylı Analiz:**
 """
     
     try:
-        print(f"📤 Mesaj gönderiliyor...")
-        print(f"📝 Mesaj uzunluğu: {len(message)} karakter")
-        
-        # Mesajı parçalara böl (Telegram 4096 karakter limiti)
-        if len(message) > 4000:
-            print(f"⚠️ Mesaj çok uzun, parçalara bölünüyor...")
-            parts = []
-            current_part = ""
-            
-            for line in message.split('\n'):
-                if len(current_part + line + '\n') > 4000:
-                    if current_part:
-                        parts.append(current_part)
-                    current_part = line + '\n'
-                else:
-                    current_part += line + '\n'
-            
-            if current_part:
-                parts.append(current_part)
-            
-            for i, part in enumerate(parts, 1):
-                print(f"📤 Parça {i}/{len(parts)} gönderiliyor...")
-                bot.send_message(user_id, part, parse_mode='Markdown')
-        else:
-            bot.send_message(user_id, message, parse_mode='Markdown')
-            
-        print(f"✅ Mesaj başarıyla gönderildi!")
-        
+        bot.send_message(user_id, general_message, parse_mode='Markdown')
+        print(f"✅ Genel bilgiler gönderildi")
     except Exception as e:
-        print(f"❌ Kullanıcı {user_id} için mesaj gönderilemedi: {e}")
-        print(f"🔍 Hata detayı: {type(e).__name__}")
-        
-        # Markdown hatası varsa düz metin olarak gönder
+        print(f"❌ Genel bilgiler gönderilemedi: {e}")
+        return
+    
+    # En iyi 3 fırsat için detaylı analiz ve grafik gönder
+    top_opportunities = results['opportunities'][:3]
+    
+    for i, opp in enumerate(top_opportunities, 1):
         try:
-            print(f"🔄 Markdown olmadan tekrar deneniyor...")
-            bot.send_message(user_id, message)
-            print(f"✅ Düz metin olarak gönderildi!")
-        except Exception as e2:
-            print(f"❌ Düz metin de gönderilemedi: {e2}")
+            print(f"📊 {i}. fırsat analiz ediliyor: {opp.get('symbol', 'UNKNOWN')}")
+            
+            # signal_visualizer.py'yi kullanarak detaylı analiz yap
+            from signal_visualizer import visualize_single_formation
+            
+            # Formasyon verilerini hazırla
+            formation_data = {
+                'symbol': opp.get('symbol', 'UNKNOWN'),
+                'direction': opp.get('yön', 'Unknown'),
+                'formation': opp.get('formasyon', 'Unknown'),
+                'entry_price': opp.get('price', 0),
+                'tp_levels': opp.get('tp_levels', {}),
+                'sl_price': opp.get('sl', 0),
+                'quality_score': opp.get('quality_score', 0),
+                'signal_strength': opp.get('signal_strength', 50),
+                'rr_ratio': opp.get('rr_ratio', 0)
+            }
+            
+            # Görselleştirme yap
+            chart_path = visualize_single_formation(formation_data)
+            
+            if chart_path and os.path.exists(chart_path):
+                print(f"📈 Grafik oluşturuldu: {chart_path}")
+                
+                # Grafiği gönder
+                with open(chart_path, 'rb') as photo:
+                    bot.send_photo(user_id, photo, caption=f"📊 {i}. Fırsat: {formation_data['symbol']}")
+                
+                # Grafik dosyasını sil
+                os.remove(chart_path)
+                print(f"🗑️ Geçici grafik silindi: {chart_path}")
+                
+            else:
+                print(f"❌ Grafik oluşturulamadı: {formation_data['symbol']}")
+                
+        except Exception as e:
+            print(f"❌ {i}. fırsat analiz hatası: {e}")
+            import traceback
+            print(f"🔍 Detaylı hata: {traceback.format_exc()}")
+    
+    # Son olarak özet mesajı gönder
+    summary_message = f"""
+✅ **Tarama Tamamlandı!**
+
+📊 **Özet:**
+• {len(results['opportunities'])} fırsat bulundu
+• En iyi 3 fırsat detaylı analiz edildi
+• Grafikler yukarıda gönderildi
+
+⏰ **Sonraki tarama: 3 saat sonra**
+🔍 **'/scan' komutu ile tekrar tarama yapabilirsiniz**
+
+📱 **Destek:** @ApfelTradingAdmin
+"""
+    
+    try:
+        bot.send_message(user_id, summary_message, parse_mode='Markdown')
+        print(f"✅ Özet mesajı gönderildi")
+    except Exception as e:
+        print(f"❌ Özet mesajı gönderilemedi: {e}")
 
 # Flask routes
 @app.route('/')
