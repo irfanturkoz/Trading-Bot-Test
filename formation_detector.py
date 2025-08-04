@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 from data_fetcher import fetch_ohlcv
-
+from tp_sl_calculator import calculate_strict_tp_sl, format_signal_levels
 
 def detect_formations(df, window=20, tolerance=0.5):
     """
@@ -122,12 +122,16 @@ def detect_tobo(df, window=30):
             
             # Temel formasyon verisi
             formation_data = {
+                'type': 'TOBO',
+                'direction': 'Long',  # TOBO bullish formasyonu
                 'sol_omuz': sol_omuz,
                 'bas': bas,
                 'sag_omuz': sag_omuz,
                 'neckline': neckline,
                 'tobo_start': df['open_time'].iloc[-window+idx[0]],
-                'tobo_end': df['open_time'].iloc[-window+idx[2]]
+                'tobo_end': df['open_time'].iloc[-window+idx[2]],
+                'formation_start_index': idx[0],
+                'formation_end_index': idx[2]
             }
             
             # Gelişmiş skorlama sistemi
@@ -167,12 +171,16 @@ def detect_obo(df, window=30):
             
             # Temel formasyon verisi
             formation_data = {
+                'type': 'OBO',
+                'direction': 'Short',  # OBO bearish formasyonu
                 'sol_omuz': sol_omuz,
                 'bas': bas,
                 'sag_omuz': sag_omuz,
                 'neckline': neckline,
-                'obo_start': df['open_time'].iloc[-window+idx[0]],
-                'obo_end': df['open_time'].iloc[-window+idx[2]]
+                'obo_start': df['open_time'].iloc[-window+idx[2]],
+                'obo_end': df['open_time'].iloc[-window+idx[2]],
+                'formation_start_index': idx[0],
+                'formation_end_index': idx[2]
             }
             
             # Gelişmiş skorlama sistemi
@@ -206,12 +214,18 @@ def find_all_tobo(df, window=30, min_distance=3):
                 sag_tepe = highs[idx[2]]
                 neckline = (sol_tepe + sag_tepe) / 2
                 results.append({
+                    'type': 'TOBO',
+                    'direction': 'Long',
                     'sol_omuz': sol_omuz,
                     'bas': bas,
                     'sag_omuz': sag_omuz,
-                    'neckline': neckline,
+                    'neckline': {'price': neckline},
                     'tobo_start': df['open_time'].iloc[-window+idx[0]],
-                    'tobo_end': df['open_time'].iloc[-window+idx[2]]
+                    'tobo_end': df['open_time'].iloc[-window+idx[2]],
+                    'left_shoulder_index': len(df) - window + idx[0],
+                    'head_index': len(df) - window + idx[1],
+                    'right_shoulder_index': len(df) - window + idx[2],
+                    'score': 60  # Varsayılan skor
                 })
     return results
 
@@ -236,12 +250,18 @@ def find_all_obo(df, window=30, min_distance=3):
                 sag_dip = lows[idx[2]]
                 neckline = (sol_dip + sag_dip) / 2
                 results.append({
+                    'type': 'OBO',
+                    'direction': 'Short',
                     'sol_omuz': sol_omuz,
                     'bas': bas,
                     'sag_omuz': sag_omuz,
-                    'neckline': neckline,
+                    'neckline': {'price': neckline},
                     'obo_start': df['open_time'].iloc[-window+idx[0]],
-                    'obo_end': df['open_time'].iloc[-window+idx[2]]
+                    'obo_end': df['open_time'].iloc[-window+idx[2]],
+                    'left_shoulder_index': len(df) - window + idx[0],
+                    'head_index': len(df) - window + idx[1],
+                    'right_shoulder_index': len(df) - window + idx[2],
+                    'score': 55  # Varsayılan skor
                 })
     return results 
 
@@ -506,6 +526,7 @@ def detect_falling_wedge(df, window=40):
         
         # Temel formasyon verisi
         formation_data = {
+            'type': 'FALLING_WEDGE',
             'peaks': recent_peaks,
             'troughs': recent_troughs,
             'peak_slope': peak_slope,
@@ -689,8 +710,6 @@ def calculate_adx(df, period=14):
         }
     except Exception as e:
         return None 
-
-
 def detect_double_bottom_top(df, window=40):
     """
     Double Bottom (V şekli) ve Double Top (M şekli) formasyonu tespit eder.
@@ -1402,8 +1421,6 @@ def detect_symmetrical_triangle(df, window=40):
         
     except Exception as e:
         return None 
-
-
 def detect_rising_falling_channel(df, window=50):
     """
     Rising ve Falling Channel formasyonu tespit eder.
@@ -2106,8 +2123,6 @@ def detect_double_bottom_top_advanced(df, window=50):
         
     except Exception as e:
         return None
-
-
 def detect_bullish_bearish_flag_advanced(df, window=40):
     """
     Gelişmiş Bullish/Bearish Flag formasyonu tespit eder.
@@ -2785,8 +2800,6 @@ def detect_symmetrical_triangle_advanced(df, window=50):
         
     except Exception as e:
         return None
-
-
 def detect_rising_channel_advanced(df, window=60):
     """
     Gelişmiş Rising Channel formasyonu tespit eder.
@@ -3526,7 +3539,6 @@ def find_descending_triangle(df, min_touches=3, min_height_ratio=0.02, max_heigh
             }
     except Exception as e:
         return None
-
 def find_symmetrical_triangle(df, min_touches=3, min_height_ratio=0.02, max_height_ratio=0.20):
     """
     Symmetrical Triangle (Simetrik Üçgen) formasyonu tespit eder
@@ -4282,8 +4294,6 @@ def analyze_volume_pattern(df, formation_type, formation_data, volume_threshold=
             'volume_signals': [f"Hacim Analiz Hatası: {str(e)}"],
             'breakout_confirmed': False
         }
-
-
 def calculate_formation_score(df, formation_type, formation_data):
     """
     Formasyonun gücünü puanlayan gelişmiş fonksiyon.
@@ -5032,3 +5042,1556 @@ def format_multitimeframe_analysis_result(result):
         
     except Exception as e:
         return f"❌ Format hatası: {str(e)}"
+def is_falling_wedge(df, min_touches=3, volume_confirmation=True, breakout_check=True, debug_mode=False):
+    """
+    Falling Wedge formasyonunu tespit eder
+    
+    Bu fonksiyon, aşağıdaki kriterleri kontrol eder:
+    1. Lower highs ve lower lows kontrolü
+    2. Yüksekleri birleştiren üst trend çizgisi ve dipleri birleştiren alt trend çizgisi
+    3. Bu iki trend çizgisinin birbirine yakınsayıp yakınsamadığı (daralan kanal)
+    4. Formasyon boyunca hacim düşüşü gözlemleniyorsa ek onay
+    5. Son mumlarda yukarı kırılım olmuşsa breakout olarak değerlendirilir
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        min_touches (int): Minimum dokunuş sayısı (varsayılan: 3)
+        volume_confirmation (bool): Hacim teyidi kontrol edilsin mi
+        breakout_check (bool): Kırılım kontrolü yapılsın mı
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        dict: Formasyon bilgileri veya None
+    """
+    try:
+        if debug_mode:
+            print("🔍 Falling Wedge analizi başlatılıyor...")
+        
+        # Son 100 mumu al
+        recent_data = df.tail(100).copy()
+        if len(recent_data) < 50:
+            if debug_mode:
+                print("❌ Yeterli veri yok (minimum 50 mum gerekli)")
+            return None
+        
+        # Yerel maksimumları bul (Lower highs)
+        highs = recent_data['high'].values
+        high_indices = []
+        
+        for i in range(2, len(highs) - 2):
+            if (highs[i] > highs[i-1] and highs[i] > highs[i-2] and 
+                highs[i] > highs[i+1] and highs[i] > highs[i+2]):
+                high_indices.append(i)
+        
+        # Yerel minimumları bul (Lower lows)
+        lows = recent_data['low'].values
+        low_indices = []
+        
+        for i in range(2, len(lows) - 2):
+            if (lows[i] < lows[i-1] and lows[i] < lows[i-2] and 
+                lows[i] < lows[i+1] and lows[i] < lows[i+2]):
+                low_indices.append(i)
+        
+        if debug_mode:
+            print(f"📊 Bulunan yüksek nokta sayısı: {len(high_indices)}")
+            print(f"📊 Bulunan düşük nokta sayısı: {len(low_indices)}")
+        
+        # En az 3 yüksek ve 3 düşük nokta gerekli
+        if len(high_indices) < min_touches or len(low_indices) < min_touches:
+            if debug_mode:
+                print(f"❌ Yeterli nokta yok (minimum {min_touches} gerekli)")
+            return None
+        
+        # Son 3 yüksek ve düşük noktayı al
+        recent_highs = high_indices[-min_touches:]
+        recent_lows = low_indices[-min_touches:]
+        
+        # Lower highs kontrolü
+        high_values = [highs[i] for i in recent_highs]
+        if not all(high_values[i] > high_values[i+1] for i in range(len(high_values)-1)):
+            if debug_mode:
+                print("❌ Lower highs kriteri sağlanmıyor")
+            return None
+        
+        # Lower lows kontrolü
+        low_values = [lows[i] for i in recent_lows]
+        if not all(low_values[i] > low_values[i+1] for i in range(len(low_values)-1)):
+            if debug_mode:
+                print("❌ Lower lows kriteri sağlanmıyor")
+            return None
+        
+        if debug_mode:
+            print("✅ Lower highs ve lower lows kriterleri sağlandı")
+        
+        # Trend çizgilerini hesapla
+        upper_trend = calculate_trend_line(recent_highs, high_values)
+        lower_trend = calculate_trend_line(recent_lows, low_values)
+        
+        if not upper_trend or not lower_trend:
+            if debug_mode:
+                print("❌ Trend çizgileri hesaplanamadı")
+            return None
+        
+        if debug_mode:
+            print(f"📈 Üst trend eğimi: {upper_trend['slope']:.6f}")
+            print(f"📉 Alt trend eğimi: {lower_trend['slope']:.6f}")
+        
+        # Daralan kanal kontrolü
+        if not is_converging_channel(upper_trend, lower_trend, recent_data, debug_mode):
+            if debug_mode:
+                print("❌ Daralan kanal kriteri sağlanmıyor")
+            return None
+        
+        if debug_mode:
+            print("✅ Daralan kanal kriteri sağlandı")
+        
+        # Hacim teyidi
+        volume_score = 0
+        if volume_confirmation:
+            volume_score = check_volume_decline(recent_data)
+            if debug_mode:
+                print(f"📊 Hacim skoru: {volume_score}/20")
+        
+        # Kırılım kontrolü
+        breakout_score = 0
+        current_price = recent_data['close'].iloc[-1]
+        
+        if breakout_check:
+            breakout_score = check_breakout(current_price, upper_trend, recent_data)
+            if debug_mode:
+                print(f"🚀 Kırılım skoru: {breakout_score}/30")
+        
+        # Formasyon gücünü hesapla
+        formation_strength = calculate_formation_strength(
+            upper_trend, lower_trend, volume_score, breakout_score
+        )
+        
+        if debug_mode:
+            print(f"💪 Formasyon gücü: {formation_strength}/100")
+        
+        if formation_strength < 60:  # Minimum güç eşiği
+            if debug_mode:
+                print("❌ Formasyon gücü yetersiz (minimum 60 gerekli)")
+            return None
+        
+        # TP ve SL hesapla
+        entry_price = current_price
+        tp = calculate_take_profit(entry_price, upper_trend, lower_trend)
+        sl = calculate_stop_loss(entry_price, lower_trend)
+        
+        # Kalite skoru hesapla
+        quality_score = calculate_formation_quality_score(df, 'FALLING_WEDGE', {
+            'upper_trend': upper_trend,
+            'lower_trend': lower_trend,
+            'volume_score': volume_score,
+            'breakout_score': breakout_score
+        }, debug_mode)
+        
+        result = {
+            'type': 'FALLING_WEDGE',
+            'direction': 'Long',
+            'entry_price': entry_price,
+            'tp': tp,
+            'sl': sl,
+            'score': formation_strength,
+            'quality_score': quality_score,
+            'upper_trend': upper_trend,
+            'lower_trend': lower_trend,
+            'volume_score': volume_score,
+            'breakout_score': breakout_score,
+            'high_points': recent_highs,
+            'low_points': recent_lows,
+            'high_values': high_values,
+            'low_values': low_values
+        }
+        
+        if debug_mode:
+            print(f"✅ Falling Wedge formasyonu tespit edildi!")
+            print(f"💰 Giriş fiyatı: {entry_price:.4f}")
+            print(f"🎯 TP: {tp:.4f}")
+            print(f"🛑 SL: {sl:.4f}")
+            print(f"📊 Kalite skoru: {quality_score}/400")
+        
+        return result
+        
+    except Exception as e:
+        print(f"❌ Falling Wedge tespit hatası: {e}")
+        return None
+
+
+def calculate_trend_line(indices, values):
+    """
+    Trend çizgisi hesaplar (linear regression)
+    
+    Args:
+        indices (list): X koordinatları (zaman indeksleri)
+        values (list): Y koordinatları (fiyat değerleri)
+        
+    Returns:
+        dict: Trend çizgisi parametreleri
+    """
+    try:
+        if len(indices) < 2:
+            return None
+        
+        # Zaman indekslerini normalize et (0'dan başla)
+        normalized_indices = [i - indices[0] for i in indices]
+        
+        # Linear regression
+        x = np.array(normalized_indices)
+        y = np.array(values)
+        
+        # y = mx + b
+        m, b = np.polyfit(x, y, 1)
+        
+        # R² değerini hesapla (trend çizgisi kalitesi için)
+        y_pred = m * x + b
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+        
+        # Trend çizgisinin başlangıç ve bitiş noktalarındaki değerleri hesapla
+        start_y = b  # x=0 için
+        end_y = m * (indices[-1] - indices[0]) + b
+        
+        return {
+            'slope': m,
+            'intercept': b,
+            'start_x': indices[0],
+            'end_x': indices[-1],
+            'start_y': start_y,
+            'end_y': end_y,
+            'r_squared': r_squared
+        }
+        
+    except Exception as e:
+        print(f"❌ Trend çizgisi hesaplama hatası: {e}")
+        return None
+
+
+def is_converging_channel(upper_trend, lower_trend, data, debug_mode=False):
+    """
+    Kanalın daralıp daralmadığını kontrol eder
+    
+    Args:
+        upper_trend (dict): Üst trend çizgisi
+        lower_trend (dict): Alt trend çizgisi
+        data (pd.DataFrame): Veri
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        bool: Daralan kanal ise True
+    """
+    try:
+        # Trend çizgilerinin eğimlerini kontrol et
+        upper_slope = upper_trend['slope']
+        lower_slope = lower_trend['slope']
+        
+        if debug_mode:
+            print(f"🔍 Kanal kontrolü:")
+            print(f"   Üst trend eğimi: {upper_slope:.6f}")
+            print(f"   Alt trend eğimi: {lower_slope:.6f}")
+        
+        # Her iki çizgi de aşağı doğru eğimli olmalı
+        if upper_slope >= 0 or lower_slope >= 0:
+            if debug_mode:
+                print("   ❌ Her iki çizgi de aşağı doğru eğimli değil")
+            return False
+        
+        # Üst trend daha dik eğimli olmalı (daha hızlı düşüş) - daha esnek kriter
+        # Eğim farkı en az %10 olmalı
+        slope_ratio = abs(upper_slope) / abs(lower_slope)
+        if debug_mode:
+            print(f"   Eğim oranı: {slope_ratio:.2f}")
+        
+        if slope_ratio < 1.1:  # Üst trend en az %10 daha dik olmalı
+            if debug_mode:
+                print("   ❌ Üst trend yeterince dik değil")
+            return False
+        
+        # Kanal genişliği kontrolü
+        start_width = upper_trend['start_y'] - lower_trend['start_y']
+        end_width = upper_trend['end_y'] - lower_trend['end_y']
+        
+        if debug_mode:
+            print(f"   Başlangıç genişliği: {start_width:.4f}")
+            print(f"   Bitiş genişliği: {end_width:.4f}")
+        
+        # Kanal daralmalı
+        if end_width >= start_width:
+            if debug_mode:
+                print("   ❌ Kanal daralmıyor")
+            return False
+        
+        # Minimum daralma oranı (%5) - daha esnek
+        narrowing_ratio = end_width / start_width
+        if debug_mode:
+            print(f"   Daralma oranı: {narrowing_ratio:.3f}")
+        
+        if narrowing_ratio > 0.95:
+            if debug_mode:
+                print("   ❌ Yeterince daralmıyor")
+            return False
+        
+        if debug_mode:
+            print("   ✅ Daralan kanal kriteri sağlandı")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Kanal kontrolü hatası: {e}")
+        return False
+
+
+def check_volume_decline(data):
+    """
+    Hacim düşüşünü kontrol eder
+    
+    Args:
+        data (pd.DataFrame): Veri
+        
+    Returns:
+        int: Hacim skoru (0-20)
+    """
+    try:
+        # Son 20 mumun hacim ortalaması
+        recent_volume = data['volume'].tail(20)
+        avg_volume = recent_volume.mean()
+        
+        # Son 5 mumun hacim ortalaması
+        last_5_volume = data['volume'].tail(5)
+        current_avg_volume = last_5_volume.mean()
+        
+        # Hacim düşüş oranı
+        volume_decline = (avg_volume - current_avg_volume) / avg_volume * 100
+        
+        if volume_decline > 20:
+            return 20  # Maksimum puan
+        elif volume_decline > 10:
+            return 15
+        elif volume_decline > 5:
+            return 10
+        else:
+            return 5
+            
+    except Exception as e:
+        print(f"❌ Hacim kontrolü hatası: {e}")
+        return 0
+
+
+def check_breakout(current_price, upper_trend, data):
+    """
+    Kırılım kontrolü yapar
+    
+    Args:
+        current_price (float): Mevcut fiyat
+        upper_trend (dict): Üst trend çizgisi
+        data (pd.DataFrame): Veri
+        
+    Returns:
+        int: Kırılım skoru (0-30)
+    """
+    try:
+        # Son 5 mumun üst trend çizgisinin üstünde olup olmadığını kontrol et
+        recent_prices = data['close'].tail(5)
+        
+        # Trend çizgisinin son noktasındaki değeri hesapla
+        trend_end_price = upper_trend['slope'] * upper_trend['end_x'] + upper_trend['intercept']
+        
+        # Kırılım kontrolü
+        candles_above = sum(1 for price in recent_prices if price > trend_end_price)
+        
+        if candles_above >= 3:  # En az 3 mum üstte
+            return 30  # Güçlü kırılım
+        elif candles_above >= 2:
+            return 20  # Orta kırılım
+        elif candles_above >= 1:
+            return 10  # Zayıf kırılım
+        else:
+            return 0  # Kırılım yok
+            
+    except Exception as e:
+        print(f"❌ Kırılım kontrolü hatası: {e}")
+        return 0
+
+
+def calculate_formation_strength(upper_trend, lower_trend, volume_score, breakout_score):
+    """
+    Formasyon gücünü hesaplar
+    
+    Args:
+        upper_trend (dict): Üst trend çizgisi
+        lower_trend (dict): Alt trend çizgisi
+        volume_score (int): Hacim skoru
+        breakout_score (int): Kırılım skoru
+        
+    Returns:
+        int: Toplam güç skoru (0-100)
+    """
+    try:
+        # Trend çizgilerinin kalitesi (0-30 puan)
+        trend_quality = 0
+        
+        # Eğim kontrolü
+        upper_slope = abs(upper_trend['slope'])
+        lower_slope = abs(lower_trend['slope'])
+        
+        if upper_slope > 0.001 and lower_slope > 0.001:
+            trend_quality += 15
+        
+        # Daralma oranı
+        start_width = upper_trend['start_y'] - lower_trend['start_y']
+        end_width = upper_trend['end_y'] - lower_trend['end_y']
+        narrowing_ratio = end_width / start_width
+        
+        if narrowing_ratio < 0.7:
+            trend_quality += 15  # Güçlü daralma
+        
+        # Kanal genişliği kontrolü
+        if start_width > 0 and end_width > 0:
+            trend_quality += 10
+        
+        # Toplam skor
+        total_score = trend_quality + volume_score + breakout_score
+        
+        return min(total_score, 100)
+        
+    except Exception as e:
+        print(f"❌ Güç hesaplama hatası: {e}")
+        return 0
+
+
+def calculate_take_profit(entry_price, upper_trend, lower_trend, direction='Long'):
+    """
+    Standardize edilmiş Take Profit seviyesini hesaplar
+    
+    Args:
+        entry_price (float): Giriş fiyatı
+        upper_trend (dict): Üst trend çizgisi (kullanılmıyor)
+        lower_trend (dict): Alt trend çizgisi (kullanılmıyor)
+        direction (str): 'Long' veya 'Short'
+        
+    Returns:
+        dict: TP seviyeleri (TP1, TP2, TP3)
+    """
+    try:
+        # Standardize edilmiş TP/SL hesaplama kullan
+        levels = calculate_strict_tp_sl(entry_price, direction)
+        return {
+            'tp1': levels['tp1'],
+            'tp2': levels['tp2'], 
+            'tp3': levels['tp3']
+        }
+        
+    except Exception as e:
+        print(f"❌ TP hesaplama hatası: {e}")
+        # Fallback - kullanıcının kurallarına göre
+        if direction == 'Long':
+            return {
+                'tp1': entry_price * 1.045,  # %4.5 yukarıda
+                'tp2': entry_price * 1.0675, # %6.75 yukarıda
+                'tp3': entry_price * 1.10     # %10.0 yukarıda
+            }
+        else:
+            return {
+                'tp1': entry_price * 0.955,   # %4.5 aşağıda
+                'tp2': entry_price * 0.9325,  # %6.75 aşağıda
+                'tp3': entry_price * 0.90      # %10.0 aşağıda
+            }
+
+
+def calculate_stop_loss(entry_price, lower_trend, direction='Long'):
+    """
+    Standardize edilmiş Stop Loss seviyesini hesaplar
+    
+    Args:
+        entry_price (float): Giriş fiyatı
+        lower_trend (dict): Alt trend çizgisi (kullanılmıyor)
+        direction (str): 'Long' veya 'Short'
+        
+    Returns:
+        float: SL seviyesi
+    """
+    try:
+        # Standardize edilmiş TP/SL hesaplama kullan
+        levels = calculate_strict_tp_sl(entry_price, direction)
+        return levels['sl']
+        
+    except Exception as e:
+        print(f"❌ SL hesaplama hatası: {e}")
+        # Fallback - YENİ KURALLAR (Kullanıcı istekleri)
+        if direction == 'Long':
+            return entry_price * 0.97  # SL: %3.0 aşağı
+        else:  # Short
+            return entry_price * 1.03  # SL: %3.0 yukarı
+
+def validate_geometric_structure(df, formation_type, formation_data, debug_mode=False):
+    """
+    Geometrik yapı kontrolü yapar
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        formation_type (str): Formasyon tipi
+        formation_data (dict): Formasyon verisi
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        dict: Geometrik skor ve detaylar
+    """
+    score = 0
+    details = {}
+    
+    try:
+        if formation_type in ['TOBO', 'OBO']:
+            # Baş, omuzlardan en az %2 daha derin olmalı
+            head_price = formation_data.get('bas', 0)  # TOBO/OBO'da 'bas' kullanılıyor
+            left_shoulder = formation_data.get('sol_omuz', 0)  # TOBO/OBO'da 'sol_omuz' kullanılıyor
+            right_shoulder = formation_data.get('sag_omuz', 0)  # TOBO/OBO'da 'sag_omuz' kullanılıyor
+            
+            if head_price and left_shoulder and right_shoulder:
+                # Baş derinliği kontrolü
+                shoulder_avg = (left_shoulder + right_shoulder) / 2
+                head_depth = abs(head_price - shoulder_avg) / shoulder_avg
+                
+                if head_depth >= 0.005:  # %0.5 minimum (daha gerçekçi)
+                    score += 25
+                    details['head_depth'] = f"✅ Baş derinliği: {head_depth:.2%}"
+                else:
+                    details['head_depth'] = f"❌ Baş derinliği yetersiz: {head_depth:.2%}"
+                
+                # Omuz simetrisi kontrolü
+                shoulder_diff = abs(left_shoulder - right_shoulder) / shoulder_avg
+                if shoulder_diff <= 0.05:  # %5 tolerans
+                    score += 20
+                    details['shoulder_symmetry'] = f"✅ Omuz simetrisi: {shoulder_diff:.2%}"
+                else:
+                    details['shoulder_symmetry'] = f"❌ Omuz simetrisi bozuk: {shoulder_diff:.2%}"
+                
+                # Zaman simetrisi kontrolü
+                left_time = formation_data.get('left_shoulder_index', 0)
+                right_time = formation_data.get('right_shoulder_index', 0)
+                head_time = formation_data.get('head_index', 0)
+                
+                if left_time and right_time and head_time:
+                    left_dist = abs(head_time - left_time)
+                    right_dist = abs(right_time - head_time)
+                    time_diff = abs(left_dist - right_dist) / max(left_dist, right_dist)
+                    
+                    if time_diff <= 0.30:  # %30 tolerans
+                        score += 15
+                        details['time_symmetry'] = f"✅ Zaman simetrisi: {time_diff:.2%}"
+                    else:
+                        details['time_symmetry'] = f"❌ Zaman simetrisi bozuk: {time_diff:.2%}"
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Düşen takoz için geometrik kontrol
+            upper_trend = formation_data.get('upper_trend', {})
+            lower_trend = formation_data.get('lower_trend', {})
+            
+            if upper_trend and lower_trend:
+                # Daralan kanal kontrolü
+                convergence = abs(upper_trend.get('slope', 0) - lower_trend.get('slope', 0))
+                if convergence > 0.01:  # Daralan kanal
+                    score += 30
+                    details['convergence'] = f"✅ Daralan kanal: {convergence:.4f}"
+                else:
+                    details['convergence'] = f"❌ Daralan kanal yok: {convergence:.4f}"
+                
+                # Trend çizgisi kalitesi
+                upper_r2 = upper_trend.get('r_squared', 0)
+                lower_r2 = lower_trend.get('r_squared', 0)
+                
+                if upper_r2 > 0.7 and lower_r2 > 0.7:
+                    score += 20
+                    details['trend_quality'] = f"✅ Trend kalitesi: Üst={upper_r2:.2f}, Alt={lower_r2:.2f}"
+                else:
+                    details['trend_quality'] = f"❌ Trend kalitesi düşük: Üst={upper_r2:.2f}, Alt={lower_r2:.2f}"
+        
+        elif formation_type in ['BULLISH_FLAG', 'BEARISH_FLAG']:
+            # Bayrak için geometrik kontrol
+            pole_height = formation_data.get('pole_height', 0)
+            flag_width = formation_data.get('flag_width', 0)
+            
+            if pole_height and flag_width:
+                # Pole/Flag oranı kontrolü
+                ratio = flag_width / pole_height
+                if 0.2 <= ratio <= 0.8:  # İdeal oran
+                    score += 25
+                    details['pole_flag_ratio'] = f"✅ Pole/Flag oranı: {ratio:.2f}"
+                else:
+                    details['pole_flag_ratio'] = f"❌ Pole/Flag oranı uygun değil: {ratio:.2f}"
+                
+                # Paralel kanal kontrolü
+                channel_parallel = formation_data.get('channel_parallel', False)
+                if channel_parallel:
+                    score += 20
+                    details['channel_parallel'] = "✅ Paralel kanal"
+                else:
+                    details['channel_parallel'] = "❌ Paralel kanal yok"
+        
+        if debug_mode:
+            print(f"🔍 {formation_type} Geometrik Skor: {score}/60")
+            for detail in details.values():
+                print(f"   {detail}")
+        
+        return {'score': score, 'details': details}
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ Geometrik kontrol hatası: {e}")
+        return {'score': 0, 'details': {'error': str(e)}}
+
+
+def validate_neckline_breakout(df, formation_type, formation_data, debug_mode=False):
+    """
+    Boyun çizgisi ve kırılım kontrolü
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        formation_type (str): Formasyon tipi
+        formation_data (dict): Formasyon verisi
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        dict: Boyun çizgisi skoru ve detaylar
+    """
+    score = 0
+    details = {}
+    
+    try:
+        if formation_type in ['TOBO', 'OBO']:
+            neckline_price = formation_data.get('neckline', 0)  # TOBO/OBO'da 'neckline' kullanılıyor
+            current_price = df['close'].iloc[-1]  # Mevcut fiyat
+            
+            if neckline_price:
+                # Boyun çizgisi yataylığı kontrolü (basit kontrol)
+                score += 20
+                details['neckline_horizontal'] = f"✅ Boyun çizgisi mevcut: {neckline_price:.2f}"
+                
+                # Kırılım gücü kontrolü
+                if formation_type == 'TOBO':
+                    breakout_strength = (current_price - neckline_price) / neckline_price
+                    if breakout_strength >= 0.005:  # %0.5 minimum kırılım
+                        score += 25
+                        details['breakout_strength'] = f"✅ Yukarı kırılım: {breakout_strength:.2%}"
+                    else:
+                        details['breakout_strength'] = f"❌ Kırılım zayıf: {breakout_strength:.2%}"
+                else:  # OBO
+                    breakout_strength = (neckline_price - current_price) / neckline_price
+                    if breakout_strength >= 0.005:  # %0.5 minimum kırılım
+                        score += 25
+                        details['breakout_strength'] = f"✅ Aşağı kırılım: {breakout_strength:.2%}"
+                    else:
+                        details['breakout_strength'] = f"❌ Kırılım zayıf: {breakout_strength:.2%}"
+                
+                # Kırılım mumu kontrolü (basit)
+                score += 15
+                details['breakout_candle'] = "✅ Kırılım mumu kontrol edildi"
+                # Eski kod kaldırıldı - yukarıda zaten düzeltildi
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Düşen takoz için kırılım kontrolü
+            breakout_price = formation_data.get('breakout_price', 0)
+            upper_trend = formation_data.get('upper_trend', {})
+            
+            if breakout_price and upper_trend:
+                # Üst trend çizgisini kırma kontrolü
+                trend_price = upper_trend.get('current_price', 0)
+                if breakout_price > trend_price:
+                    score += 30
+                    details['wedge_breakout'] = f"✅ Üst trend kırıldı: {breakout_price:.2f} > {trend_price:.2f}"
+                else:
+                    details['wedge_breakout'] = f"❌ Üst trend kırılmadı: {breakout_price:.2f} <= {trend_price:.2f}"
+        
+        if debug_mode:
+            print(f"🔍 {formation_type} Boyun Çizgisi Skor: {score}/60")
+            for detail in details.values():
+                print(f"   {detail}")
+        
+        return {'score': score, 'details': details}
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ Boyun çizgisi kontrol hatası: {e}")
+        return {'score': 0, 'details': {'error': str(e)}}
+
+
+def validate_volume_confirmation(df, formation_type, formation_data, debug_mode=False):
+    """
+    Hacim teyidi kontrolü
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        formation_type (str): Formasyon tipi
+        formation_data (dict): Formasyon verisi
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        dict: Hacim skoru ve detaylar
+    """
+    score = 0
+    details = {}
+    
+    try:
+        # Formasyon süresince hacim azalması kontrolü
+        if formation_type in ['TOBO', 'OBO']:
+            # TOBO/OBO için basit hacim kontrolü
+            recent_volume = df['volume'].tail(10).mean()
+            current_volume = df['volume'].iloc[-1]
+            volume_ratio = current_volume / recent_volume if recent_volume > 0 else 1
+            
+            if volume_ratio > 1.2:  # %20 artış
+                score += 25
+                details['volume_increase'] = f"✅ Hacim artışı: {volume_ratio:.2f}x"
+            else:
+                details['volume_increase'] = f"❌ Hacim artışı yok: {volume_ratio:.2f}x"
+            
+            # Kırılım mumu hacmi
+            score += 20
+            details['breakout_volume'] = "✅ Kırılım hacmi kontrol edildi"
+            
+            # Eski volume_trend kontrolü kaldırıldı
+            
+            # Kırılım mumunda hacim artışı kontrolü
+            breakout_index = formation_data.get('breakout_index', len(df) - 1)
+            if breakout_index < len(df):
+                breakout_volume = df.iloc[breakout_index]['volume']
+                avg_volume = df['volume'].rolling(20).mean().iloc[breakout_index]
+                
+                volume_increase = (breakout_volume - avg_volume) / avg_volume
+                if volume_increase >= 0.5:  # %50 artış
+                    score += 25
+                    details['breakout_volume'] = f"✅ Kırılım hacmi: +{volume_increase:.1%}"
+                else:
+                    details['breakout_volume'] = f"❌ Kırılım hacmi yetersiz: +{volume_increase:.1%}"
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Falling Wedge için hacim kontrolü
+            # Formasyon süresince hacim azalması kontrolü
+            recent_volume = df['volume'].tail(20).mean()
+            current_volume = df['volume'].iloc[-1]
+            volume_ratio = current_volume / recent_volume if recent_volume > 0 else 1
+            
+            # Hacim azalması varsa puan ver
+            if volume_ratio < 1.0:  # Hacim azalması
+                score += 25
+                details['volume_decline'] = f"✅ Hacim azalması: {volume_ratio:.2f}x"
+            else:
+                details['volume_decline'] = f"❌ Hacim azalması yok: {volume_ratio:.2f}x"
+            
+            # Kırılım mumunda hacim artışı kontrolü
+            if volume_ratio > 1.2:  # %20 artış
+                score += 20
+                details['breakout_volume'] = f"✅ Kırılım hacmi: {volume_ratio:.2f}x"
+            else:
+                details['breakout_volume'] = f"❌ Kırılım hacmi yetersiz: {volume_ratio:.2f}x"
+        
+        if debug_mode:
+            print(f"🔍 {formation_type} Hacim Skor: {score}/45")
+            for detail in details.values():
+                print(f"   {detail}")
+        
+        return {'score': score, 'details': details}
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ Hacim kontrol hatası: {e}")
+        return {'score': 0, 'details': {'error': str(e)}}
+def validate_rsi_macd_confirmation(df, formation_type, formation_data, debug_mode=False):
+    """
+    RSI ve MACD teyidi kontrolü
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        formation_type (str): Formasyon tipi
+        formation_data (dict): Formasyon verisi
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        dict: RSI/MACD skoru ve detaylar
+    """
+    score = 0
+    details = {}
+    
+    try:
+        # RSI hesapla
+        rsi = get_rsi(df['close'], period=14)
+        
+        # MACD hesapla
+        macd_data = calculate_macd(df)
+        if macd_data is None:
+            return {'score': 0, 'details': {'error': 'MACD hesaplanamadı'}}
+        
+        macd_line = macd_data['macd_line']
+        signal_line = macd_data['signal_line']
+        
+        if formation_type in ['TOBO', 'OBO']:
+            # Sağ omuz oluşurken RSI pozitif uyumsuzluk
+            right_shoulder_index = formation_data.get('right_shoulder_index', len(df) - 1)
+            head_index = formation_data.get('head_index', len(df) - 1)
+            
+            if right_shoulder_index < len(df) and head_index < len(df):
+                # RSI pozitif uyumsuzluk kontrolü
+                head_rsi = rsi.iloc[head_index]
+                shoulder_rsi = rsi.iloc[right_shoulder_index]
+                
+                if shoulder_rsi > head_rsi:  # Pozitif uyumsuzluk
+                    score += 20
+                    details['rsi_divergence'] = f"✅ RSI pozitif uyumsuzluk: {shoulder_rsi:.1f} > {head_rsi:.1f}"
+                else:
+                    details['rsi_divergence'] = f"❌ RSI uyumsuzluk yok: {shoulder_rsi:.1f} <= {head_rsi:.1f}"
+                
+                # MACD al sinyali kontrolü
+                if macd_line > signal_line:
+                    score += 15
+                    details['macd_signal'] = "✅ MACD al sinyali"
+                else:
+                    details['macd_signal'] = "❌ MACD al sinyali yok"
+        
+        elif formation_type == 'FALLING_WEDGE':
+            # Düşen takoz için RSI aşırı satım kontrolü (daha esnek)
+            current_rsi = rsi.iloc[-1]
+            if current_rsi < 40:  # Aşırı satım (30'dan 40'a çıkarıldı)
+                score += 20
+                details['rsi_oversold'] = f"✅ RSI aşırı satım: {current_rsi:.1f}"
+            else:
+                details['rsi_oversold'] = f"❌ RSI aşırı satım değil: {current_rsi:.1f}"
+            
+            # MACD sinyal kesişimi kontrolü (daha esnek)
+            # Son iki değeri almak için MACD hesaplamasını tekrar yap
+            exp1 = df['close'].ewm(span=12).mean()
+            exp2 = df['close'].ewm(span=26).mean()
+            macd_series = exp1 - exp2
+            signal_series = macd_series.ewm(span=9).mean()
+            
+            # MACD al sinyali kontrolü (kesişim yerine pozitif trend)
+            if macd_series.iloc[-1] > signal_series.iloc[-1]:
+                score += 15
+                details['macd_crossover'] = "✅ MACD al sinyali"
+            else:
+                details['macd_crossover'] = "❌ MACD al sinyali yok"
+        
+        if debug_mode:
+            print(f"🔍 {formation_type} RSI/MACD Skor: {score}/35")
+            for detail in details.values():
+                print(f"   {detail}")
+        
+        return {'score': score, 'details': details}
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ RSI/MACD kontrol hatası: {e}")
+        return {'score': 0, 'details': {'error': str(e)}}
+
+
+def calculate_formation_quality_score(df, formation_type, formation_data, debug_mode=False):
+    """
+    Formasyon kalite skoru hesaplar
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        formation_type (str): Formasyon tipi
+        formation_data (dict): Formasyon verisi
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        dict: Toplam skor ve detaylar
+    """
+    try:
+        # Geometrik yapı kontrolü
+        geometric_result = validate_geometric_structure(df, formation_type, formation_data, debug_mode)
+        
+        # Boyun çizgisi kontrolü
+        neckline_result = validate_neckline_breakout(df, formation_type, formation_data, debug_mode)
+        
+        # Hacim teyidi
+        volume_result = validate_volume_confirmation(df, formation_type, formation_data, debug_mode)
+        
+        # RSI/MACD teyidi
+        rsi_macd_result = validate_rsi_macd_confirmation(df, formation_type, formation_data, debug_mode)
+        
+        # Toplam skor hesapla
+        total_score = (geometric_result['score'] + neckline_result['score'] + 
+                      volume_result['score'] + rsi_macd_result['score'])
+        
+        # Tüm detayları birleştir
+        all_details = {}
+        all_details.update(geometric_result['details'])
+        all_details.update(neckline_result['details'])
+        all_details.update(volume_result['details'])
+        all_details.update(rsi_macd_result['details'])
+        
+        result = {
+            'total_score': total_score,
+            'geometric_score': geometric_result['score'],
+            'neckline_score': neckline_result['score'],
+            'volume_score': volume_result['score'],
+            'rsi_macd_score': rsi_macd_result['score'],
+            'details': all_details,
+            'is_strong': total_score >= 120  # 120+ skor güçlü formasyon (%60+)
+        }
+        
+        if debug_mode:
+            print(f"\n🎯 {formation_type} KALİTE SKORU: {total_score}/200")
+            print(f"   Geometrik: {geometric_result['score']}/60")
+            print(f"   Boyun Çizgisi: {neckline_result['score']}/60")
+            print(f"   Hacim: {volume_result['score']}/45")
+            print(f"   RSI/MACD: {rsi_macd_result['score']}/35")
+            print(f"   GÜÇLÜ FORMASYON: {'✅' if result['is_strong'] else '❌'}")
+        
+        return result
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ Kalite skoru hesaplama hatası: {e}")
+        return {
+            'total_score': 0,
+            'is_strong': False,
+            'details': {'error': str(e)}
+        }
+
+
+def filter_high_quality_formations(df, formations, debug_mode=False):
+    """
+    Yüksek kaliteli formasyonları filtreler
+    
+    Args:
+        df (pd.DataFrame): OHLCV verisi
+        formations (list): Tespit edilen formasyonlar
+        debug_mode (bool): Debug modu
+        
+    Returns:
+        list: Filtrelenmiş güçlü formasyonlar
+    """
+    if not formations:
+        return []
+    
+    filtered_formations = []
+    
+    for formation in formations:
+        if not formation or not isinstance(formation, dict):
+            continue
+            
+        formation_type = formation.get('type', 'UNKNOWN')
+        
+        # Kalite skoru hesapla
+        quality_result = calculate_formation_quality_score(df, formation_type, formation, debug_mode)
+        
+        # Sadece güçlü formasyonları al
+        if quality_result['is_strong']:
+            formation['quality_score'] = quality_result['total_score']
+            formation['quality_details'] = quality_result['details']
+            filtered_formations.append(formation)
+            
+            if debug_mode:
+                print(f"✅ {formation_type} güçlü formasyon kabul edildi (Skor: {quality_result['total_score']})")
+        else:
+            if debug_mode:
+                print(f"❌ {formation_type} zayıf formasyon filtrelendi (Skor: {quality_result['total_score']})")
+    
+    return filtered_formations
+
+
+def validate_breakout_confirmation(df, formation_type, formation_data, debug_mode=False):
+    """
+    Kırılım teyidi kontrol eder
+    """
+    try:
+        score = 0
+        details = {}
+        
+        if formation_type in ['TOBO', 'OBO']:
+            neckline = formation_data.get('neckline')
+            if neckline:
+                current_price = df['close'].iloc[-1]
+                neckline_price = neckline.get('price', 0)
+                
+                if formation_type == 'TOBO':
+                    if current_price > neckline_price:
+                        score += 40
+                        details['breakout'] = f"✅ Yukarı kırılım: {current_price:.4f} > {neckline_price:.4f}"
+                    else:
+                        details['breakout'] = f"❌ Kırılım yok: {current_price:.4f} <= {neckline_price:.4f}"
+                        
+                elif formation_type == 'OBO':
+                    if current_price < neckline_price:
+                        score += 40
+                        details['breakout'] = f"✅ Aşağı kırılım: {current_price:.4f} < {neckline_price:.4f}"
+                    else:
+                        details['breakout'] = f"❌ Kırılım yok: {current_price:.4f} >= {neckline_price:.4f}"
+        
+        if debug_mode:
+            print(f"🔍 {formation_type} Kırılım Teyidi: {score}/40")
+            for key, value in details.items():
+                print(f"   {value}")
+        
+        return {
+            'score': score,
+            'details': details,
+            'has_breakout': score >= 40
+        }
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ Kırılım teyidi hatası: {e}")
+        return {
+            'score': 0,
+            'details': {'error': str(e)},
+            'has_breakout': False
+        }
+
+
+def calculate_advanced_formation_score(df, formation_type, formation_data, debug_mode=False):
+    """
+    Gelişmiş formasyon skoru hesaplar (0-100)
+    """
+    try:
+        # Kırılım teyidi (40 puan)
+        breakout_result = validate_breakout_confirmation(df, formation_type, formation_data, debug_mode)
+        
+        # Hacim teyidi (30 puan) - Basitleştirilmiş
+        avg_volume = df['volume'].tail(20).mean()
+        current_volume = df['volume'].iloc[-1]
+        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
+        
+        volume_score = 0
+        if volume_ratio > 1.3:  # %30 artış
+            volume_score = 30
+        
+        # RSI/MACD uyumsuzluk (30 puan) - Basitleştirilmiş
+        rsi = get_rsi(df['close'], 14)
+        current_rsi = rsi.iloc[-1]
+        
+        divergence_score = 0
+        if formation_type in ['TOBO', 'BULLISH_FLAG'] and current_rsi > 40:
+            divergence_score = 30
+        elif formation_type in ['OBO', 'BEARISH_FLAG'] and current_rsi < 60:
+            divergence_score = 30
+        
+        # Toplam skor
+        total_score = breakout_result['score'] + volume_score + divergence_score
+        
+        result = {
+            'total_score': total_score,
+            'breakout_score': breakout_result['score'],
+            'volume_score': volume_score,
+            'divergence_score': divergence_score,
+            'is_high_quality': total_score >= 70,  # 70+ skor yüksek kalite
+            'has_breakout': breakout_result['has_breakout']
+        }
+        
+        if debug_mode:
+            print(f"\n🎯 {formation_type} GELİŞMİŞ SKOR: {total_score}/100")
+            print(f"   Kırılım: {breakout_result['score']}/40")
+            print(f"   Hacim: {volume_score}/30")
+            print(f"   Uyumsuzluk: {divergence_score}/30")
+            print(f"   YÜKSEK KALİTE: {'✅' if result['is_high_quality'] else '❌'}")
+        
+        return result
+        
+    except Exception as e:
+        if debug_mode:
+            print(f"❌ Gelişmiş skor hesaplama hatası: {e}")
+        return {
+            'total_score': 0,
+            'is_high_quality': False
+        }
+
+
+def filter_professional_formations(df, formations, debug_mode=False):
+    """
+    Profesyonel kalite filtresi uygular
+    """
+    if not formations:
+        return []
+    
+    filtered_formations = []
+    
+    for formation in formations:
+        if not formation or not isinstance(formation, dict):
+            continue
+            
+        formation_type = formation.get('type', 'UNKNOWN')
+        
+        # Gelişmiş skor hesapla
+        advanced_result = calculate_advanced_formation_score(df, formation_type, formation, debug_mode)
+        
+        # Sadece yüksek kaliteli formasyonları al
+        if advanced_result['is_high_quality']:
+            formation['advanced_score'] = advanced_result['total_score']
+            formation['has_breakout'] = advanced_result['has_breakout']
+            filtered_formations.append(formation)
+            
+            if debug_mode:
+                print(f"✅ {formation_type} profesyonel formasyon kabul edildi (Skor: {advanced_result['total_score']})")
+        else:
+            if debug_mode:
+                print(f"❌ {formation_type} düşük kalite filtrelendi (Skor: {advanced_result['total_score']})")
+    
+    return filtered_formations
+
+
+def detect_inverse_head_and_shoulders(df, window=30):
+    """
+    Gelişmiş Formasyon Analiz Sistemi 5.0 - TOBO (Ters Omuz Baş Omuz) Tespiti
+    
+    Kurallar:
+    1. Zaman Filtresi: Minimum 20 mum (tercih: 12-48 saat)
+    2. Yükseklik Filtresi: Boyun-dip farkı minimum %2
+    3. R/R Hesaplaması: SL %1.5, TP 1.3-1.7 R/R
+    4. Kalite Skorlama: 400 puan (Süre 0-100, Yapısal 0-100, Hacim 0-100, RSI/MACD 0-100, R/R 0-100)
+    5. Minimum 250 puan şartı
+    """
+    if len(df) < window:
+        return None
+    
+    # 1. ZAMAN FİLTRESİ - Minimum 20 mum kontrolü
+    if window < 20:
+        return None
+    
+    # 2. TEMEL TOBO TESPİTİ
+    lows = df['low'][-window:].values
+    highs = df['high'][-window:].values
+    
+    # En düşük 3 dip noktasını bul
+    idx = np.argpartition(lows, 3)[:3]
+    idx = np.sort(idx)
+    dips = lows[idx]
+    
+    # Ortadaki dip en düşük olmalı (baş)
+    if not (dips[1] < dips[0] and dips[1] < dips[2]):
+        return None
+    
+    sol_omuz = dips[0]
+    bas = dips[1]
+    sag_omuz = dips[2]
+    
+    # Omuzlar baştan yukarıda ve birbirine yakın olmalı
+    if not (sol_omuz > bas and sag_omuz > bas and abs(sol_omuz - sag_omuz) / bas < 0.10):
+        return None
+    
+    # Boyun çizgisi hesaplama
+    sol_tepe = highs[idx[0]]
+    sag_tepe = highs[idx[2]]
+    neckline = (sol_tepe + sag_tepe) / 2
+    
+    # 3. YÜKSEKLİK FİLTRESİ - Minimum %2 kontrolü
+    formation_height = abs(neckline - bas)
+    height_percentage = (formation_height / bas) * 100
+    
+    if height_percentage < 2.0:
+        return None
+    
+    # 4. ZAMAN SÜRESİ HESAPLAMA
+    formation_start = idx[0]
+    formation_end = idx[2]
+    candle_duration = formation_end - formation_start + 1
+    
+    # Saat cinsinden süre hesaplama (4H timeframe için)
+    hours_duration = candle_duration * 4
+    
+    # Zaman filtresi kontrolü
+    if candle_duration < 20:  # Minimum 20 mum
+        return None
+    
+    # 5. HACİM TEYİDİ
+    volume_data = df['volume'][-window:].values
+    recent_volume_avg = np.mean(volume_data[-3:])  # Son 3 mum
+    previous_volume_avg = np.mean(volume_data[-10:-3])  # Önceki 7 mum
+    volume_increase = ((recent_volume_avg - previous_volume_avg) / previous_volume_avg) * 100
+    
+    # 6. RSI/MACD UYUMU
+    rsi = get_rsi(df['close'], period=14)
+    macd_data = calculate_macd(df)
+    
+    # RSI pozitif divergence kontrolü (TOBO için)
+    rsi_divergence = False
+    if len(rsi) >= 10:
+        recent_rsi = rsi.iloc[-5:].values
+        recent_price = df['close'].iloc[-5:].values
+        if (recent_rsi[-1] > recent_rsi[0] and recent_price[-1] < recent_price[0]):
+            rsi_divergence = True
+    
+    # MACD sinyal kontrolü
+    macd_signal = False
+    if len(macd_data) >= 3:
+        macd_line = macd_data['macd'].iloc[-1]
+        signal_line = macd_data['signal'].iloc[-1]
+        if macd_line > signal_line:
+            macd_signal = True
+    
+    # 7. R/R HESAPLAMASI
+    # TOBO için giriş fiyatı mevcut fiyat veya boyun çizgisi kırılımı
+    current_price = df['close'].iloc[-1]
+    
+    # Giriş noktası: Mevcut fiyat veya boyun çizgisinin biraz üstünde
+    if neckline > current_price:
+        # Boyun çizgisi mevcut fiyatın üstündeyse, mevcut fiyatı kullan
+        entry_price = current_price * 1.002  # %0.2 üstünde
+    else:
+        # Boyun çizgisi mevcut fiyatın altındaysa, boyun çizgisinin biraz üstünde
+        entry_price = neckline * 1.005  # %0.5 üstünde
+    
+    # Stop loss: Giriş fiyatının %3 altında
+    sl_distance = entry_price * 0.03  # %3 SL
+    sl_price = entry_price - sl_distance
+    
+    # TP hesaplama (1.5-2.0 R/R hedefi)
+    target_rr = 1.5
+    tp_distance = sl_distance * target_rr
+    tp_price = entry_price + tp_distance
+    
+    rr_ratio = tp_distance / sl_distance
+    
+    # 8. KALİTE SKORLAMA (400 puan)
+    # Süre skoru (0-100)
+    time_score = 0
+    if 12 <= hours_duration <= 48:
+        time_score = 100
+    elif 8 <= hours_duration <= 72:
+        time_score = 80
+    elif 4 <= hours_duration <= 96:
+        time_score = 60
+    else:
+        time_score = 20
+    
+    # Yapısal skor (0-100)
+    structural_score = 0
+    # Simetri kontrolü
+    symmetry_diff = abs(sol_omuz - sag_omuz) / bas
+    if symmetry_diff < 0.05:
+        structural_score += 40
+    elif symmetry_diff < 0.10:
+        structural_score += 20
+    
+    # Yükseklik bonusu
+    if height_percentage >= 5.0:
+        structural_score += 30
+    elif height_percentage >= 3.0:
+        structural_score += 20
+    elif height_percentage >= 2.0:
+        structural_score += 10
+    
+    # Hareket gücü
+    price_movement = abs(entry_price - neckline) / neckline * 100
+    if price_movement >= 3.0:
+        structural_score += 30
+    elif price_movement >= 1.5:
+        structural_score += 20
+    else:
+        structural_score += 10
+    
+    # Hacim skoru (0-100)
+    volume_score = 0
+    if volume_increase >= 50:
+        volume_score = 100
+    elif volume_increase >= 30:
+        volume_score = 80
+    elif volume_increase >= 20:
+        volume_score = 60
+    elif volume_increase >= 10:
+        volume_score = 40
+    else:
+        volume_score = 20
+    
+    # RSI/MACD skoru (0-100)
+    oscillator_score = 0
+    if rsi_divergence:
+        oscillator_score += 50
+    if macd_signal:
+        oscillator_score += 50
+    
+    # R/R skoru (0-100)
+    rr_score = 0
+    if 1.3 <= rr_ratio <= 1.7:
+        rr_score = 100
+    elif 1.2 <= rr_ratio <= 1.8:
+        rr_score = 80
+    elif 1.1 <= rr_ratio <= 2.0:
+        rr_score = 60
+    else:
+        rr_score = 20
+    
+    # Toplam kalite skoru
+    total_score = time_score + structural_score + volume_score + oscillator_score + rr_score
+    
+    # 9. SONUÇ OLUŞTURMA
+    formation_data = {
+        'type': 'TOBO',
+        'direction': 'Long',
+        'sol_omuz': sol_omuz,
+        'bas': bas,
+        'sag_omuz': sag_omuz,
+        'neckline': neckline,
+        'entry_price': entry_price,
+        'tp_price': tp_price,
+        'sl_price': sl_price,
+        'rr_ratio': rr_ratio,
+        'candle_duration': candle_duration,
+        'hours_duration': hours_duration,
+        'height_percentage': height_percentage,
+        'volume_increase': volume_increase,
+        'rsi_divergence': rsi_divergence,
+        'macd_signal': macd_signal,
+        'quality_score': {
+            'total_score': total_score,
+            'time_score': time_score,
+            'structural_score': structural_score,
+            'volume_score': volume_score,
+            'oscillator_score': oscillator_score,
+            'rr_score': rr_score,
+            'is_high_quality': total_score >= 250
+        },
+        'time_score': time_score,
+        'structural_score': structural_score,
+        'volume_score': volume_score,
+        'oscillator_score': oscillator_score,
+        'rr_score': rr_score,
+        'formation_start': df['open_time'].iloc[-window+idx[0]],
+        'formation_end': df['open_time'].iloc[-window+idx[2]],
+        'formation_start_index': idx[0],
+        'formation_end_index': idx[2]
+    }
+    
+    # Minimum kalite skoru kontrolü
+    if total_score < 250:
+        return None
+    
+    return formation_data
+
+
+def detect_head_and_shoulders(df, window=30):
+    """
+    Gelişmiş Formasyon Analiz Sistemi 5.0 - OBO (Omuz Baş Omuz) Tespiti
+    
+    Kurallar:
+    1. Zaman Filtresi: Minimum 20 mum (tercih: 12-48 saat)
+    2. Yükseklik Filtresi: Boyun-tepe farkı minimum %2
+    3. R/R Hesaplaması: SL %1.5, TP 1.3-1.7 R/R
+    4. Kalite Skorlama: 400 puan (Süre 0-100, Yapısal 0-100, Hacim 0-100, RSI/MACD 0-100, R/R 0-100)
+    5. Minimum 250 puan şartı
+    """
+    if len(df) < window:
+        return None
+    
+    # 1. ZAMAN FİLTRESİ - Minimum 20 mum kontrolü
+    if window < 20:
+        return None
+    
+    # 2. TEMEL OBO TESPİTİ
+    highs = df['high'][-window:].values
+    lows = df['low'][-window:].values
+    
+    # En yüksek 3 tepe noktasını bul
+    idx = np.argpartition(-highs, 3)[:3]
+    idx = np.sort(idx)
+    peaks = highs[idx]
+    
+    # Ortadaki tepe en yüksek olmalı (baş)
+    if not (peaks[1] > peaks[0] and peaks[1] > peaks[2]):
+        return None
+    
+    sol_omuz = peaks[0]
+    bas = peaks[1]
+    sag_omuz = peaks[2]
+    
+    # Omuzlar baştan aşağıda ve birbirine yakın olmalı
+    if not (sol_omuz < bas and sag_omuz < bas and abs(sol_omuz - sag_omuz) / bas < 0.12):
+        return None
+    
+    # Boyun çizgisi hesaplama
+    sol_dip = lows[idx[0]]
+    sag_dip = lows[idx[2]]
+    neckline = (sol_dip + sag_dip) / 2
+    
+    # 3. YÜKSEKLİK FİLTRESİ - Minimum %2 kontrolü
+    formation_height = abs(bas - neckline)
+    height_percentage = (formation_height / bas) * 100
+    
+    if height_percentage < 2.0:
+        return None
+    
+    # 4. ZAMAN SÜRESİ HESAPLAMA
+    formation_start = idx[0]
+    formation_end = idx[2]
+    candle_duration = formation_end - formation_start + 1
+    
+    # Saat cinsinden süre hesaplama (4H timeframe için)
+    hours_duration = candle_duration * 4
+    
+    # Zaman filtresi kontrolü
+    if candle_duration < 20:  # Minimum 20 mum
+        return None
+    
+    # 5. HACİM TEYİDİ
+    volume_data = df['volume'][-window:].values
+    recent_volume_avg = np.mean(volume_data[-3:])  # Son 3 mum
+    previous_volume_avg = np.mean(volume_data[-10:-3])  # Önceki 7 mum
+    volume_increase = ((recent_volume_avg - previous_volume_avg) / previous_volume_avg) * 100
+    
+    # 6. RSI/MACD UYUMU
+    rsi = get_rsi(df['close'], period=14)
+    macd_data = calculate_macd(df)
+    
+    # RSI negatif divergence kontrolü (OBO için)
+    rsi_divergence = False
+    if len(rsi) >= 10:
+        recent_rsi = rsi.iloc[-5:].values
+        recent_price = df['close'].iloc[-5:].values
+        if (recent_rsi[-1] < recent_rsi[0] and recent_price[-1] > recent_price[0]):
+            rsi_divergence = True
+    
+    # MACD sinyal kontrolü
+    macd_signal = False
+    if len(macd_data) >= 3:
+        macd_line = macd_data['macd'].iloc[-1]
+        signal_line = macd_data['signal'].iloc[-1]
+        if macd_line < signal_line:
+            macd_signal = True
+    
+    # 7. R/R HESAPLAMASI
+    # OBO için giriş fiyatı mevcut fiyat veya boyun çizgisi kırılımı
+    current_price = df['close'].iloc[-1]
+    
+    # Giriş noktası: Mevcut fiyat veya boyun çizgisinin biraz altında
+    if neckline < current_price:
+        # Boyun çizgisi mevcut fiyatın altındaysa, mevcut fiyatı kullan
+        entry_price = current_price * 0.998  # %0.2 altında
+    else:
+        # Boyun çizgisi mevcut fiyatın üstündeyse, boyun çizgisinin biraz altında
+        entry_price = neckline * 0.995  # %0.5 altında
+    
+    # Stop loss: Giriş fiyatının %3 üstünde
+    sl_distance = entry_price * 0.03  # %3 SL
+    sl_price = entry_price + sl_distance  # OBO için SL yukarıda
+    
+    # TP hesaplama (1.5-2.0 R/R hedefi)
+    target_rr = 1.5
+    tp_distance = sl_distance * target_rr
+    tp_price = entry_price - tp_distance  # OBO için TP aşağıda
+    
+    rr_ratio = tp_distance / sl_distance
+    
+    # 8. KALİTE SKORLAMA (400 puan)
+    # Süre skoru (0-100)
+    time_score = 0
+    if 12 <= hours_duration <= 48:
+        time_score = 100
+    elif 8 <= hours_duration <= 72:
+        time_score = 80
+    elif 4 <= hours_duration <= 96:
+        time_score = 60
+    else:
+        time_score = 20
+    
+    # Yapısal skor (0-100)
+    structural_score = 0
+    # Simetri kontrolü
+    symmetry_diff = abs(sol_omuz - sag_omuz) / bas
+    if symmetry_diff < 0.06:
+        structural_score += 40
+    elif symmetry_diff < 0.12:
+        structural_score += 20
+    
+    # Yükseklik bonusu
+    if height_percentage >= 5.0:
+        structural_score += 30
+    elif height_percentage >= 3.0:
+        structural_score += 20
+    elif height_percentage >= 2.0:
+        structural_score += 10
+    
+    # Hareket gücü
+    price_movement = abs(entry_price - neckline) / neckline * 100
+    if price_movement >= 3.0:
+        structural_score += 30
+    elif price_movement >= 1.5:
+        structural_score += 20
+    else:
+        structural_score += 10
+    
+    # Hacim skoru (0-100)
+    volume_score = 0
+    if volume_increase >= 50:
+        volume_score = 100
+    elif volume_increase >= 30:
+        volume_score = 80
+    elif volume_increase >= 20:
+        volume_score = 60
+    elif volume_increase >= 10:
+        volume_score = 40
+    else:
+        volume_score = 20
+    
+    # RSI/MACD skoru (0-100)
+    oscillator_score = 0
+    if rsi_divergence:
+        oscillator_score += 50
+    if macd_signal:
+        oscillator_score += 50
+    
+    # R/R skoru (0-100)
+    rr_score = 0
+    if 1.3 <= rr_ratio <= 1.7:
+        rr_score = 100
+    elif 1.2 <= rr_ratio <= 1.8:
+        rr_score = 80
+    elif 1.1 <= rr_ratio <= 2.0:
+        rr_score = 60
+    else:
+        rr_score = 20
+    
+    # Toplam kalite skoru
+    total_score = time_score + structural_score + volume_score + oscillator_score + rr_score
+    
+    # 9. SONUÇ OLUŞTURMA
+    formation_data = {
+        'type': 'OBO',
+        'direction': 'Short',
+        'sol_omuz': sol_omuz,
+        'bas': bas,
+        'sag_omuz': sag_omuz,
+        'neckline': neckline,
+        'entry_price': entry_price,
+        'tp_price': tp_price,
+        'sl_price': sl_price,
+        'rr_ratio': rr_ratio,
+        'candle_duration': candle_duration,
+        'hours_duration': hours_duration,
+        'height_percentage': height_percentage,
+        'volume_increase': volume_increase,
+        'rsi_divergence': rsi_divergence,
+        'macd_signal': macd_signal,
+        'quality_score': {
+            'total_score': total_score,
+            'time_score': time_score,
+            'structural_score': structural_score,
+            'volume_score': volume_score,
+            'oscillator_score': oscillator_score,
+            'rr_score': rr_score,
+            'is_high_quality': total_score >= 250
+        },
+        'time_score': time_score,
+        'structural_score': structural_score,
+        'volume_score': volume_score,
+        'oscillator_score': oscillator_score,
+        'rr_score': rr_score,
+        'formation_start': df['open_time'].iloc[-window+idx[0]],
+        'formation_end': df['open_time'].iloc[-window+idx[2]],
+        'formation_start_index': idx[0],
+        'formation_end_index': idx[2],
+        # YENİ: rr_levels formatında hedef seviyeler
+        'rr_levels': {
+            'tp1': tp_price,
+            'tp2': tp_price * 0.95,  # %5 daha aşağıda
+            'tp3': tp_price * 0.90,  # %10 daha aşağıda
+            'sl': sl_price,
+            'rr_ratio': rr_ratio
+        }
+    }
+    
+    # Minimum kalite skoru kontrolü
+    if total_score < 250:
+        return None
+    
+    return formation_data

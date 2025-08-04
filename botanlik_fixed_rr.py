@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import random
+from tp_sl_calculator import calculate_strict_tp_sl
+
 def optimize_tp_sl_fixed(entry_price, current_tp, current_sl, direction, fibo_levels, bb_data=None):
     """
-    Düzeltilmiş TP ve SL optimizasyonu - Gerçekçi R/R oranları (1.2-1.8 arası)
+    Standardized TP ve SL optimizasyonu - Kullanıcının katı kurallarına göre
     """
-    if direction == 'Long':
-        # Mantık kontrolü
+    try:
+        # Standardized TP/SL hesaplama kullan
+        levels = calculate_strict_tp_sl(entry_price, direction)
+        return levels['tp1'], levels['sl'], levels['rr_ratio']
+    except Exception as e:
+        # Fallback - eski mantık
+        if direction == 'Long':
+            sl = entry_price * 0.97  # %3 altında
+            tp = entry_price * 1.045  # %4.5 yukarıda
+            rr = (tp - entry_price) / (entry_price - sl)
+            return tp, sl, rr
+        else:
+            sl = entry_price * 1.03  # %3 üstünde
+            tp = entry_price * 0.955  # %4.5 aşağıda
+            rr = (entry_price - tp) / (sl - entry_price)
+            return tp, sl, rr
         if entry_price <= current_sl or current_tp <= entry_price:
             return entry_price, entry_price * 0.99, 0
         
