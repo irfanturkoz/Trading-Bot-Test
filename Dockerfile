@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Uygulamayı çalıştır
-CMD ["python", "stop_all_bots.py"] 
+CMD ["python", "start.py"] 

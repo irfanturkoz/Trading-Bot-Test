@@ -917,26 +917,27 @@ def run_telegram_bot():
     # 409 Conflict hatası için özel ayarlar
     try:
         print("📱 Bot polling başlatılıyor...")
-        # Offset'i sıfırla ve daha kısa timeout kullan
-        try:
-            bot.get_updates(offset=-1)  # Tüm eski mesajları temizle
-        except Exception as clear_error:
-            print(f"⚠️ Mesaj temizleme hatası (normal): {clear_error}")
+        
+        # Webhook kullanarak polling'i başlat
+        bot.remove_webhook()
+        time.sleep(1)
         
         # Daha güvenli polling ayarları
-        bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
+        bot.polling(none_stop=True, interval=3, timeout=20, long_polling_timeout=20)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         
         # 409 Conflict hatası için özel işlem
         if "409" in str(e) or "Conflict" in str(e):
-            print("🔄 409 Conflict hatası - 10 saniye bekleyip tekrar deniyorum...")
+            print("🔄 409 Conflict hatası - 15 saniye bekleyip tekrar deniyorum...")
             import time
-            time.sleep(10)
+            time.sleep(15)
             
             try:
                 print("🔄 İkinci deneme başlatılıyor...")
-                bot.polling(none_stop=True, interval=1, timeout=10, long_polling_timeout=10)
+                bot.remove_webhook()
+                time.sleep(1)
+                bot.polling(none_stop=True, interval=3, timeout=20, long_polling_timeout=20)
             except Exception as e2:
                 print(f"❌ İkinci deneme de başarısız: {e2}")
                 print("💡 Railway'de başka bir bot instance'ı çalışıyor olabilir.")
