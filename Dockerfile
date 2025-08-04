@@ -20,5 +20,5 @@ COPY . .
 # Port ayarı
 EXPOSE 8080
 
-# Uygulamayı çalıştır
-CMD ["python", "start.py"] 
+# Debug için önce environment variables'ları kontrol et
+CMD ["python", "debug_env.py"] 
