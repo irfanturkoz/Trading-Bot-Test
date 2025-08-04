@@ -259,7 +259,7 @@ def analyze_symbol(symbol, interval='4h', debug_mode=False):
 
 def get_scan_results(symbols=None, interval='4h', max_workers=5, debug_mode=False):
     """
-    Çoklu sembol taraması yapar
+    Çoklu sembol taraması yapar ve start.py için uygun format döndürür
     
     Args:
         symbols (list): Sembol listesi (None ise tüm USDT çiftleri)
@@ -268,43 +268,119 @@ def get_scan_results(symbols=None, interval='4h', max_workers=5, debug_mode=Fals
         debug_mode (bool): Debug modu
         
     Returns:
-        dict: Tarama sonuçları
+        dict: Tarama sonuçları (start.py formatında)
     """
     try:
-        if symbols is None:
-            symbols = get_usdt_symbols()
+        print("🔍 Gelişmiş formasyon analiz sistemi başlatılıyor...")
+        analyzer = AdvancedFormationAnalyzer()
         
-        if debug_mode:
-            print(f"🔍 {len(symbols)} sembol taranacak...")
-        
-        results = []
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_symbol = {
-                executor.submit(analyze_symbol, symbol, interval, debug_mode): symbol 
-                for symbol in symbols
-            }
+        # Tüm sembolleri tara
+        print("📊 Tüm USDT sembolleri taranıyor...")
+        scan_results = analyzer.scan_all_symbols(max_workers=3)  # Daha az worker
+
+        if scan_results:
+            print(f"✅ {len(scan_results)} yüksek kaliteli formasyon bulundu")
+
+            # En iyi formasyonları seç
+            top_results = []
+            for result in scan_results:
+                if result.get('success') and result.get('best_formation'):
+                    top_results.append(result)
+
+            # Kalite skoruna göre sırala
+            def get_quality_score(result):
+                quality_score = result.get('quality_score', 0)
+                if isinstance(quality_score, dict):
+                    return quality_score.get('total_score', 0)
+                return quality_score
             
-            for future in as_completed(future_to_symbol):
-                symbol = future_to_symbol[future]
-                try:
-                    result = future.result()
-                    if result and result.get('strong_formations', 0) > 0:
-                        results.append(result)
-                        if debug_mode:
-                            print(f"✅ {symbol}: {result['strong_formations']} güçlü formasyon")
-                except Exception as e:
-                    if debug_mode:
-                        print(f"❌ {symbol} analiz hatası: {e}")
-        
-        if debug_mode:
-            print(f"🎯 Tarama tamamlandı: {len(results)} sembolde güçlü formasyon bulundu")
-        
-        return results
-        
+            top_results.sort(key=get_quality_score, reverse=True)
+            
+            # start.py formatında sonuçları hazırla
+            opportunities = []
+            for result in top_results[:10]:  # En iyi 10 formasyon
+                symbol = result['symbol']
+                formation = result['best_formation']
+                quality_score = result.get('quality_score', 0)
+                if isinstance(quality_score, dict):
+                    quality_score_int = quality_score.get('total_score', 0)
+                else:
+                    quality_score_int = quality_score
+                
+                # Mevcut fiyatı al
+                current_price = get_current_price(symbol)
+                if not current_price:
+                    continue
+                
+                # TP/SL hesaplamaları
+                entry_price = current_price
+                direction = formation.get('direction', 'Long')
+                formation_type = formation.get('type', 'Unknown')
+                
+                # Risk analizi
+                risk_analysis = {
+                    'position_size': 'Kasanın %5\'i',
+                    'potential_gain': '%2.5',
+                    'risk_amount': '%1.0',
+                    'max_loss': '%1.0',
+                    'risk_reward': '2.5:1'
+                }
+                
+                # Sinyal gücü hesapla
+                signal_strength = min(100, quality_score_int / 4)  # 400'den 100'e normalize et
+                
+                # TP/SL seviyeleri
+                if direction == 'Long':
+                    tp = entry_price * 1.025  # %2.5 yukarı
+                    sl = entry_price * 0.99   # %1 aşağı
+                else:  # Short
+                    tp = entry_price * 0.975  # %2.5 aşağı
+                    sl = entry_price * 1.01   # %1 yukarı
+                
+                # TP farkı hesapla
+                tpfark = abs(tp - entry_price) / entry_price
+                
+                opportunity = {
+                    'symbol': symbol,
+                    'yön': direction,
+                    'formasyon': formation_type,
+                    'price': entry_price,
+                    'tp': tp,
+                    'sl': sl,
+                    'tpfark': tpfark,
+                    'risk_analysis': risk_analysis,
+                    'signal_strength': signal_strength,
+                    'rr_ratio': 2.5,
+                    'quality_score': quality_score_int,
+                    'tp_levels': {
+                        'tp1': tp,
+                        'tp2': tp * 1.01 if direction == 'Long' else tp * 0.99,
+                        'tp3': tp * 1.02 if direction == 'Long' else tp * 0.98
+                    }
+                }
+                
+                opportunities.append(opportunity)
+            
+            return {
+                "total_scanned": len(get_usdt_symbols()),
+                "opportunities": opportunities,
+                "scan_time": "3-5 dakika"
+            }
+        else:
+            print("❌ Hiç formasyon bulunamadı")
+            return {
+                "total_scanned": len(get_usdt_symbols()),
+                "opportunities": [],
+                "scan_time": "3-5 dakika"
+            }
+
     except Exception as e:
         print(f"❌ Tarama hatası: {e}")
-        return []
+        return {
+            "total_scanned": 0,
+            "opportunities": [],
+            "scan_time": "0 dakika"
+        }
 
 # ============================================================================
 # MAIN FUNCTION
