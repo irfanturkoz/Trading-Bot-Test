@@ -1,0 +1,6 @@
+# Railway'de eklenmesi gereken Environment Variables:
+
+TELEGRAM_BOT_TOKEN=8259350638:AAEvnwmHddZ2raKa8bXYYxRG4U3kD0tdjZY
+ADMIN_CHAT_ID=7977984015
+
+# Not: Bu dosya sadece referans için. Railway dashboard'dan manuel olarak eklenmeli. 

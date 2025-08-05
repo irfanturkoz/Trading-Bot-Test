@@ -12,7 +12,7 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 # Environment variable varsa kontrol et, yoksa veya yanlışsa hardcoded kullan
 if not TELEGRAM_BOT_TOKEN or "AAGSkI5VI" in TELEGRAM_BOT_TOKEN:
     # Hardcoded token kullan (start.py ile aynı)
-    TELEGRAM_BOT_TOKEN = "8243806452:AAErJkMJ9yDEL3IDGFN_ayQHnXQhHkiA-YE"
+    TELEGRAM_BOT_TOKEN = "8259350638:AAEvnwmHddZ2raKa8bXYYxRG4U3kD0tdjZY"
     print("⚠️ Environment variable bulunamadı veya yanlış, hardcoded token kullanılıyor")
 else:
     print("✅ Bot token environment variable'dan yüklendi")

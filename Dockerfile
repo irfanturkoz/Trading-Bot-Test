@@ -20,5 +20,5 @@ COPY . .
 # Port ayarı
 EXPOSE 8080
 
-# Uygulamayı çalıştır
-CMD ["sh", "-c", "pkill -f python || true && sleep 10 && python start.py"] 
+# Uygulamayı çalıştır - Yeni bot token ile
+CMD ["python", "start.py"] 

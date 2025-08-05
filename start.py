@@ -14,8 +14,8 @@ load_dotenv()
 # Flask app
 app = Flask(__name__)
 
-# Bot token'ını al - Railway'deki environment variable sorunlu, doğrudan kullan
-BOT_TOKEN = "8243806452:AAErJkMJ9yDEL3IDGFN_ayQHnXQhHkiA-YE"
+# Bot token'ını al - Yeni bot token'ı
+BOT_TOKEN = "8259350638:AAEvnwmHddZ2raKa8bXYYxRG4U3kD0tdjZY"
 print(f"🔍 Token kullanılıyor: {BOT_TOKEN[:20]}...")
 
 # Bot'u oluştur
@@ -952,8 +952,8 @@ def run_telegram_bot():
         import time
         time.sleep(1)
         
-        # Daha güvenli polling ayarları
-        bot.polling(none_stop=True, interval=3, timeout=20, long_polling_timeout=20)
+        # Daha güvenli polling ayarları - 409 Conflict için özel ayarlar
+        bot.polling(none_stop=True, interval=5, timeout=30, long_polling_timeout=30)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         
@@ -967,8 +967,8 @@ def run_telegram_bot():
                 print("🔄 İkinci deneme başlatılıyor...")
                 bot.remove_webhook()
                 import time
-                time.sleep(1)
-                bot.polling(none_stop=True, interval=3, timeout=20, long_polling_timeout=20)
+                time.sleep(3)
+                bot.polling(none_stop=True, interval=5, timeout=30, long_polling_timeout=30)
             except Exception as e2:
                 print(f"❌ İkinci deneme de başarısız: {e2}")
                 print("💡 Railway'de başka bir bot instance'ı çalışıyor olabilir.")
