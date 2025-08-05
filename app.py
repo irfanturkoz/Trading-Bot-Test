@@ -323,6 +323,13 @@ def add_license():
         
         print(f"✅ Lisans eklendi: {key[:8]}...")
         
+        # Lisans yöneticisini yeniden yükle
+        try:
+            license_manager.load_admin_licenses()
+            print(f"🔄 Lisans yöneticisi yeniden yüklendi")
+        except Exception as e:
+            print(f"⚠️ Lisans yöneticisi yeniden yüklenemedi: {e}")
+        
         return jsonify({'success': True, 'message': 'Lisans eklendi'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -397,6 +404,13 @@ def generate_license():
         
         print(f"✅ Otomatik lisans oluşturuldu: {license_key}")
         print(f"📋 Lisans bilgileri: {license_info}")
+        
+        # Lisans yöneticisini yeniden yükle
+        try:
+            license_manager.load_admin_licenses()
+            print(f"🔄 Lisans yöneticisi yeniden yüklendi")
+        except Exception as e:
+            print(f"⚠️ Lisans yöneticisi yeniden yüklenemedi: {e}")
         
         return jsonify({
             'success': True, 

@@ -57,6 +57,8 @@ class LicenseManager:
         
         # Admin panelinde oluşturulan lisansları yükle
         self.load_admin_licenses()
+        print(f"🚀 LicenseManager başlatıldı. Toplam lisans sayısı: {len(self.valid_licenses)}")
+        print(f"📋 Mevcut lisanslar: {list(self.valid_licenses.keys())}")
     
     def load_admin_licenses(self):
         """Admin panelinde oluşturulan lisansları yükler"""
@@ -68,16 +70,18 @@ class LicenseManager:
                 print(f"📂 Admin lisansları yükleniyor...")
                 print(f"📋 Bulunan lisanslar: {list(admin_licenses.keys())}")
                 
-                # Admin lisanslarını mevcut listeye ekle
+                # Tüm admin lisanslarını otomatik olarak ekle (aktif olanlar)
+                added_count = 0
                 for key, value in admin_licenses.items():
                     # Lisansın aktif olup olmadığını kontrol et
                     if value.get('active', True):  # Varsayılan olarak aktif
                         self.valid_licenses[key] = value
-                        print(f"✅ Lisans eklendi: {key} - {value.get('type', 'unknown')} - Aktif: {value.get('active', True)}")
+                        added_count += 1
+                        print(f"✅ Lisans otomatik eklendi: {key} - {value.get('type', 'unknown')}")
                     else:
                         print(f"⏸️ Lisans pasif, eklenmedi: {key}")
                     
-                print(f"📂 {len(admin_licenses)} admin lisansı yüklendi.")
+                print(f"📂 {added_count} aktif admin lisansı otomatik yüklendi.")
                 print(f"📋 Toplam lisans sayısı: {len(self.valid_licenses)}")
                 print(f"📋 Tüm lisanslar: {list(self.valid_licenses.keys())}")
             else:
@@ -95,20 +99,13 @@ class LicenseManager:
         print(f"🔍 Doğrulanan anahtar: {license_key}")
         print(f"📋 Mevcut anahtarlar: {list(self.valid_licenses.keys())}")
         
+        # Lisans anahtarını temizle (boşlukları kaldır)
+        license_key = license_key.strip()
+        
         if license_key not in self.valid_licenses:
             print(f"❌ Lisans bulunamadı: {license_key}")
             print(f"🔍 Aranan anahtar: '{license_key}'")
             print(f"📋 Mevcut anahtarlar: {[repr(k) for k in self.valid_licenses.keys()]}")
-            
-            # Dosyayı tekrar kontrol et
-            try:
-                with open(self.licenses_file, 'r') as f:
-                    file_licenses = json.load(f)
-                print(f"📂 Dosyadaki lisanslar: {list(file_licenses.keys())}")
-                if license_key in file_licenses:
-                    print(f"⚠️ Lisans dosyada var ama yüklenmemiş: {license_key}")
-            except Exception as e:
-                print(f"❌ Dosya okuma hatası: {e}")
             
             return False, "Geçersiz lisans anahtarı!"
         
