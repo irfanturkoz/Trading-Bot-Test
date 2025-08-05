@@ -101,7 +101,11 @@ def admin_panel():
             .license-form { display: flex; gap: 10px; margin: 10px 0; }
             .license-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
             .license-list { max-height: 400px; overflow-y: auto; }
-            .license-item { padding: 10px; margin: 5px 0; border: 1px solid #eee; border-radius: 5px; }
+            .license-item { padding: 10px; margin: 5px 0; border: 1px solid #eee; border-radius: 5px; display: flex; align-items: center; gap: 10px; }
+            .status-badge { padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+            .status-badge.active { background: #28a745; color: white; }
+            .status-badge.inactive { background: #dc3545; color: white; }
+            .btn-warning { background: #ffc107; color: black; }
         </style>
     </head>
     <body>
@@ -127,6 +131,7 @@ def admin_panel():
                         <option value="unlimited">Sınırsız ($500)</option>
                     </select>
                     <button class="btn btn-success" onclick="addLicense()">➕ Lisans Ekle</button>
+                    <button class="btn btn-primary" onclick="generateAutoLicense()">🎲 Otomatik Lisans Oluştur</button>
                 </div>
                 <div class="license-list" id="license-list">Yükleniyor...</div>
             </div>
@@ -183,10 +188,53 @@ def admin_panel():
                         list.innerHTML = data.licenses.map(license => `
                             <div class="license-item">
                                 <strong>${license.key}</strong> - ${license.type} ($${license.price})
+                                <span class="status-badge ${license.active ? 'active' : 'inactive'}">
+                                    ${license.active ? '✅ Aktif' : '❌ Pasif'}
+                                </span>
+                                <button class="btn btn-warning" onclick="toggleLicense('${license.key}', ${!license.active})">
+                                    ${license.active ? '⏸️ Pasif Yap' : '▶️ Aktif Yap'}
+                                </button>
                                 <button class="btn btn-danger" onclick="deleteLicense('${license.key}')">🗑️ Sil</button>
                             </div>
                         `).join('');
                     });
+            }
+            
+            function generateAutoLicense() {
+                const type = document.getElementById('license-type').value;
+                
+                fetch('/admin/generate-license', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('license-key').value = data.license_key;
+                        alert('Otomatik lisans oluşturuldu: ' + data.license_key);
+                        loadLicenses();
+                    } else {
+                        alert('Hata: ' + data.message);
+                    }
+                });
+            }
+            
+            function toggleLicense(key, active) {
+                fetch('/admin/toggle-license', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({key, active})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Lisans ${active ? 'aktif' : 'pasif'} hale getirildi!`);
+                        loadLicenses();
+                    } else {
+                        alert('Hata: ' + data.message);
+                    }
+                });
             }
             
             function deleteLicense(key) {
@@ -229,7 +277,8 @@ def get_licenses():
             license_list.append({
                 'key': key,
                 'type': info.get('type', 'unknown'),
-                'price': info.get('price', 0)
+                'price': info.get('price', 0),
+                'active': info.get('active', True)  # Varsayılan olarak aktif
             })
         
         return jsonify({'licenses': license_list})
@@ -252,7 +301,8 @@ def add_license():
             'type': license_type,
             'price': {'monthly': 100, 'quarterly': 200, 'unlimited': 500}[license_type],
             'activated_date': datetime.now().isoformat(),
-            'expiry_date': None if license_type == 'unlimited' else None
+            'expiry_date': None if license_type == 'unlimited' else None,
+            'active': True
         }
         
         # Lisansı kaydet
@@ -291,6 +341,87 @@ def delete_license():
                 json.dump(licenses, f, indent=2)
             
             return jsonify({'success': True, 'message': 'Lisans silindi'})
+        else:
+            return jsonify({'success': False, 'message': 'Lisans bulunamadı'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/admin/generate-license', methods=['POST'])
+def generate_license():
+    """Otomatik lisans oluştur"""
+    try:
+        data = request.json
+        license_type = data.get('type')
+        
+        if not license_type:
+            return jsonify({'success': False, 'message': 'Lisans tipi gerekli'})
+        
+        # Hash tabanlı lisans anahtarı oluştur
+        import hashlib
+        import time
+        import random
+        
+        timestamp = str(int(time.time()))
+        random_num = str(random.randint(1000, 9999))
+        combined = f"{license_type}_{timestamp}_{random_num}"
+        
+        # SHA-256 hash oluştur ve 16 karakterlik parça al
+        hash_object = hashlib.sha256(combined.encode())
+        license_key = hash_object.hexdigest()[:16].upper()
+        
+        # Lisans bilgilerini oluştur
+        license_info = {
+            'type': license_type,
+            'price': {'monthly': 100, 'quarterly': 200, 'unlimited': 500}[license_type],
+            'activated_date': datetime.now().isoformat(),
+            'expiry_date': None if license_type == 'unlimited' else None,
+            'active': True
+        }
+        
+        # Lisansı kaydet
+        with open('licenses.json', 'r') as f:
+            licenses = json.load(f)
+        
+        licenses[license_key] = license_info
+        
+        with open('licenses.json', 'w') as f:
+            json.dump(licenses, f, indent=2)
+        
+        print(f"✅ Otomatik lisans oluşturuldu: {license_key[:8]}...")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Lisans oluşturuldu',
+            'license_key': license_key
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/admin/toggle-license', methods=['POST'])
+def toggle_license():
+    """Lisans aktif/pasif durumunu değiştir"""
+    try:
+        data = request.json
+        key = data.get('key')
+        active = data.get('active')
+        
+        if not key:
+            return jsonify({'success': False, 'message': 'Lisans anahtarı gerekli'})
+        
+        # Lisansı güncelle
+        with open('licenses.json', 'r') as f:
+            licenses = json.load(f)
+        
+        if key in licenses:
+            licenses[key]['active'] = active
+            
+            with open('licenses.json', 'w') as f:
+                json.dump(licenses, f, indent=2)
+            
+            status = "aktif" if active else "pasif"
+            print(f"✅ Lisans durumu değiştirildi: {key[:8]}... - {status}")
+            
+            return jsonify({'success': True, 'message': f'Lisans {status} hale getirildi'})
         else:
             return jsonify({'success': False, 'message': 'Lisans bulunamadı'})
     except Exception as e:
