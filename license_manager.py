@@ -113,13 +113,18 @@ class LicenseManager:
             "price": license_info["price"]
         }
         
-        # Süre hesapla
-        if license_info["duration"] == -1:  # Sınırsız
-            license_data["expiry_date"] = None
-            license_data["status"] = "active"
+        # Süre hesapla (admin panel lisansları için duration alanı yok)
+        if "duration" in license_info:
+            if license_info["duration"] == -1:  # Sınırsız
+                license_data["expiry_date"] = None
+                license_data["status"] = "active"
+            else:
+                expiry_date = datetime.now() + timedelta(days=license_info["duration"])
+                license_data["expiry_date"] = expiry_date.isoformat()
+                license_data["status"] = "active"
         else:
-            expiry_date = datetime.now() + timedelta(days=license_info["duration"])
-            license_data["expiry_date"] = expiry_date.isoformat()
+            # Admin panel lisansları için
+            license_data["expiry_date"] = None  # Şimdilik sınırsız
             license_data["status"] = "active"
         
         # Lisans bilgilerini kaydet
@@ -140,11 +145,21 @@ class LicenseManager:
             if license_data["type"] == "unlimited":
                 return True, license_data
             
-            # Süre kontrolü
-            if license_data["expiry_date"]:
-                expiry_date = datetime.fromisoformat(license_data["expiry_date"])
-                if datetime.now() > expiry_date:
-                    return False, "Lisans süreniz dolmuş! Yenilemek için @tgtradingbot ile iletişime geçin."
+            # Süre kontrolü (duration alanı yoksa varsayılan değerler kullan)
+            if "duration" in license_data:
+                if license_data["duration"] == -1:  # Sınırsız
+                    return True, license_data
+                elif license_data["duration"] > 0:
+                    # Süre hesaplama
+                    expiry_date = datetime.now() + timedelta(days=license_data["duration"])
+                    if datetime.now() > expiry_date:
+                        return False, "Lisans süreniz dolmuş! Yenilemek için @tgtradingbot ile iletişime geçin."
+            else:
+                # Admin panel lisansları için expiry_date kontrolü
+                if license_data.get("expiry_date"):
+                    expiry_date = datetime.fromisoformat(license_data["expiry_date"])
+                    if datetime.now() > expiry_date:
+                        return False, "Lisans süreniz dolmuş! Yenilemek için @tgtradingbot ile iletişime geçin."
             
             return True, license_data
             
