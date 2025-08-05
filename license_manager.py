@@ -98,7 +98,7 @@ class LicenseManager:
         if license_key not in self.valid_licenses:
             print(f"❌ Lisans bulunamadı: {license_key}")
             print(f"🔍 Aranan anahtar: '{license_key}'")
-            print(f"📋 Mevcut anahtarlar: {[f"'{k}'" for k in self.valid_licenses.keys()]}")
+            print(f"📋 Mevcut anahtarlar: {[repr(k) for k in self.valid_licenses.keys()]}")
             
             # Dosyayı tekrar kontrol et
             try:
