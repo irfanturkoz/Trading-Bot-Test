@@ -14,5 +14,13 @@
     "expiry_date": null,
     "active": true,
     "features": ["Temel Tarama", "Telegram Bildirimleri", "Formasyon Analizi"]
+  },
+  "1BB5E17D65F6E3BC": {
+    "type": "monthly",
+    "price": 100,
+    "activated_date": "2025-08-05T16:30:00",
+    "expiry_date": null,
+    "active": true,
+    "features": ["Temel Tarama", "Telegram Bildirimleri", "Formasyon Analizi"]
   }
 }

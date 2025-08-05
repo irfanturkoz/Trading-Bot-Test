@@ -113,60 +113,89 @@ class LicenseManager:
     
     def validate_license(self, license_key):
         """Lisans anahtarını doğrular"""
-        # Önce admin lisanslarını yeniden yükle (güncel olması için)
-        self.load_admin_licenses()
-        
-        print(f"🔍 Doğrulanan anahtar: {license_key}")
-        print(f"📋 Mevcut anahtarlar: {list(self.valid_licenses.keys())}")
-        
         # Lisans anahtarını temizle (boşlukları kaldır)
         license_key = license_key.strip()
         
-        if license_key not in self.valid_licenses:
-            print(f"❌ Lisans bulunamadı: {license_key}")
-            print(f"🔍 Aranan anahtar: '{license_key}'")
-            print(f"📋 Mevcut anahtarlar: {[repr(k) for k in self.valid_licenses.keys()]}")
+        print(f"🔍 Doğrulanan anahtar: {license_key}")
+        print(f"📋 Memory'deki lisanslar: {list(self.valid_licenses.keys())}")
+        
+        # Önce memory'de kontrol et (admin panel'den yeni eklenenler için)
+        if license_key in self.valid_licenses:
+            license_info = self.valid_licenses[license_key]
+            print(f"✅ Lisans memory'de bulundu: {license_key}")
             
-            return False, "Geçersiz lisans anahtarı!"
-        
-        license_info = self.valid_licenses[license_key]
-        print(f"✅ Lisans bulundu: {license_info}")
-        
-        # Lisansın aktif olup olmadığını kontrol et (admin panel lisansları için)
-        if 'active' in license_info and not license_info.get('active', True):
-            print(f"❌ Lisans pasif: {license_key}")
-            return False, "Lisans pasif durumda!"
-        
-        print(f"✅ Lisans aktif: {license_key}")
-        
-        # Lisans bilgilerini kaydet
-        license_data = {
-            "key": license_key,
-            "type": license_info["type"],
-            "activated_date": datetime.now().isoformat(),
-            "expiry_date": None,
-            "features": license_info.get("features", []),  # Eğer yoksa boş liste
-            "price": license_info.get("price", 0)  # Eğer yoksa 0
-        }
-        
-        # Süre hesapla (admin panel lisansları için duration alanı yok)
-        if "duration" in license_info:
-            if license_info["duration"] == -1:  # Sınırsız
-                license_data["expiry_date"] = None
+            # Lisansın aktif olup olmadığını kontrol et
+            if license_info.get('active', True):
+                print(f"✅ Lisans aktif: {license_key}")
+                
+                # Lisans bilgilerini kaydet
+                license_data = {
+                    "key": license_key,
+                    "type": license_info["type"],
+                    "activated_date": datetime.now().isoformat(),
+                    "expiry_date": None,
+                    "features": license_info.get("features", []),
+                    "price": license_info.get("price", 0)
+                }
+                
+                # Admin panel lisansları için
+                license_data["expiry_date"] = None  # Şimdilik sınırsız
                 license_data["status"] = "active"
+                
+                # Lisans bilgilerini kaydet
+                self.save_license(license_data)
+                
+                return True, license_data
             else:
-                expiry_date = datetime.now() + timedelta(days=license_info["duration"])
-                license_data["expiry_date"] = expiry_date.isoformat()
-                license_data["status"] = "active"
-        else:
-            # Admin panel lisansları için
-            license_data["expiry_date"] = None  # Şimdilik sınırsız
-            license_data["status"] = "active"
+                print(f"❌ Lisans pasif: {license_key}")
+                return False, "Lisans pasif durumda!"
         
-        # Lisans bilgilerini kaydet
-        self.save_license(license_data)
-        
-        return True, license_data
+        # Dosyayı kontrol et
+        try:
+            with open(self.licenses_file, 'r') as f:
+                file_licenses = json.load(f)
+            
+            print(f"📂 Dosyadaki lisanslar: {list(file_licenses.keys())}")
+            
+            if license_key in file_licenses:
+                license_info = file_licenses[license_key]
+                print(f"✅ Lisans dosyada bulundu: {license_key}")
+                
+                # Lisansın aktif olup olmadığını kontrol et
+                if license_info.get('active', True):
+                    print(f"✅ Lisans aktif: {license_key}")
+                    
+                    # Lisans bilgilerini kaydet
+                    license_data = {
+                        "key": license_key,
+                        "type": license_info["type"],
+                        "activated_date": datetime.now().isoformat(),
+                        "expiry_date": None,
+                        "features": license_info.get("features", []),
+                        "price": license_info.get("price", 0)
+                    }
+                    
+                    # Admin panel lisansları için
+                    license_data["expiry_date"] = None  # Şimdilik sınırsız
+                    license_data["status"] = "active"
+                    
+                    # Lisans bilgilerini kaydet
+                    self.save_license(license_data)
+                    
+                    return True, license_data
+                else:
+                    print(f"❌ Lisans pasif: {license_key}")
+                    return False, "Lisans pasif durumda!"
+            else:
+                print(f"❌ Lisans bulunamadı: {license_key}")
+                print(f"🔍 Aranan anahtar: '{license_key}'")
+                print(f"📋 Memory'deki anahtarlar: {[repr(k) for k in self.valid_licenses.keys()]}")
+                print(f"📋 Dosyadaki anahtarlar: {[repr(k) for k in file_licenses.keys()]}")
+                return False, "Geçersiz lisans anahtarı!"
+                
+        except Exception as e:
+            print(f"❌ Dosya okuma hatası: {e}")
+            return False, "Lisans dosyası okunamadı!"
     
     def check_license_status(self):
         """Mevcut lisans durumunu kontrol eder"""

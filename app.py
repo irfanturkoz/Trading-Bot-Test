@@ -327,6 +327,11 @@ def add_license():
         try:
             license_manager.load_admin_licenses()
             print(f"🔄 Lisans yöneticisi yeniden yüklendi")
+            
+            # Yeni lisansı valid_licenses'a ekle
+            license_manager.valid_licenses[key] = license_info
+            print(f"✅ Yeni lisans bot'a eklendi: {key}")
+            
         except Exception as e:
             print(f"⚠️ Lisans yöneticisi yeniden yüklenemedi: {e}")
         
@@ -409,6 +414,11 @@ def generate_license():
         try:
             license_manager.load_admin_licenses()
             print(f"🔄 Lisans yöneticisi yeniden yüklendi")
+            
+            # Yeni lisansı valid_licenses'a ekle
+            license_manager.valid_licenses[license_key] = license_info
+            print(f"✅ Yeni lisans bot'a eklendi: {license_key}")
+            
         except Exception as e:
             print(f"⚠️ Lisans yöneticisi yeniden yüklenemedi: {e}")
         
