@@ -4,6 +4,7 @@
     "price": 100,
     "activated_date": "2025-08-05T15:15:00",
     "expiry_date": null,
-    "active": true
+    "active": true,
+    "features": ["Temel Tarama", "Telegram Bildirimleri", "Formasyon Analizi"]
   }
 }

@@ -109,7 +109,7 @@ class LicenseManager:
             "type": license_info["type"],
             "activated_date": datetime.now().isoformat(),
             "expiry_date": None,
-            "features": license_info["features"],
+            "features": license_info.get("features", []),  # Eğer yoksa boş liste
             "price": license_info["price"]
         }
         

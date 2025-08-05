@@ -302,7 +302,8 @@ def add_license():
             'price': {'monthly': 100, 'quarterly': 200, 'unlimited': 500}[license_type],
             'activated_date': datetime.now().isoformat(),
             'expiry_date': None if license_type == 'unlimited' else None,
-            'active': True
+            'active': True,
+            'features': ['Temel Tarama', 'Telegram Bildirimleri', 'Formasyon Analizi']
         }
         
         # Lisansı kaydet
@@ -375,7 +376,8 @@ def generate_license():
             'price': {'monthly': 100, 'quarterly': 200, 'unlimited': 500}[license_type],
             'activated_date': datetime.now().isoformat(),
             'expiry_date': None if license_type == 'unlimited' else None,
-            'active': True
+            'active': True,
+            'features': ['Temel Tarama', 'Telegram Bildirimleri', 'Formasyon Analizi']
         }
         
         # Lisansı kaydet
