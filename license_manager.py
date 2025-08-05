@@ -70,15 +70,22 @@ class LicenseManager:
                 
                 # Admin lisanslarını mevcut listeye ekle
                 for key, value in admin_licenses.items():
-                    self.valid_licenses[key] = value
-                    print(f"✅ Lisans eklendi: {key} - {value.get('type', 'unknown')}")
+                    # Lisansın aktif olup olmadığını kontrol et
+                    if value.get('active', True):  # Varsayılan olarak aktif
+                        self.valid_licenses[key] = value
+                        print(f"✅ Lisans eklendi: {key} - {value.get('type', 'unknown')} - Aktif: {value.get('active', True)}")
+                    else:
+                        print(f"⏸️ Lisans pasif, eklenmedi: {key}")
                     
                 print(f"📂 {len(admin_licenses)} admin lisansı yüklendi.")
                 print(f"📋 Toplam lisans sayısı: {len(self.valid_licenses)}")
+                print(f"📋 Tüm lisanslar: {list(self.valid_licenses.keys())}")
             else:
                 print(f"❌ {self.licenses_file} dosyası bulunamadı!")
         except Exception as e:
             print(f"❌ Admin lisansları yüklenemedi: {e}")
+            import traceback
+            traceback.print_exc()
     
     def validate_license(self, license_key):
         """Lisans anahtarını doğrular"""
@@ -90,6 +97,19 @@ class LicenseManager:
         
         if license_key not in self.valid_licenses:
             print(f"❌ Lisans bulunamadı: {license_key}")
+            print(f"🔍 Aranan anahtar: '{license_key}'")
+            print(f"📋 Mevcut anahtarlar: {[f"'{k}'" for k in self.valid_licenses.keys()]}")
+            
+            # Dosyayı tekrar kontrol et
+            try:
+                with open(self.licenses_file, 'r') as f:
+                    file_licenses = json.load(f)
+                print(f"📂 Dosyadaki lisanslar: {list(file_licenses.keys())}")
+                if license_key in file_licenses:
+                    print(f"⚠️ Lisans dosyada var ama yüklenmemiş: {license_key}")
+            except Exception as e:
+                print(f"❌ Dosya okuma hatası: {e}")
+            
             return False, "Geçersiz lisans anahtarı!"
         
         license_info = self.valid_licenses[license_key]

@@ -547,6 +547,8 @@ def handle_all_messages(message):
     if user_states[user_id] == "waiting_license":
         # Lisans anahtarı bekleniyor
         print(f"🔍 Lisans kontrol ediliyor: {text}")
+        print(f"📋 Lisans anahtarı uzunluğu: {len(text)}")
+        print(f"📋 Lisans anahtarı karakterleri: {[c for c in text]}")
         
         # Lisans doğrulama
         success, result = license_manager.validate_license(text)
