@@ -428,7 +428,133 @@ def toggle_license():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+# Telegram Bot Handlers
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    """Başlangıç komutu"""
+    user_id = message.from_user.id
+    user_states[user_id] = "waiting_license"
+    
+    welcome_text = """
+🤖 **Hoş Geldiniz Sniper Crypto!**
+
+❌ **Lisansınız Yok!**
+
+🔑 **Lisans Anahtarınızı Giriniz:** 
+Lisans anahtarınızı buraya yazın.
+
+💬 **Lisans Satın Almak İçin:** 
+@ApfelTradingAdmin ile iletişime geçin.
+
+📦 **Paketler:**
+• 1 Aylık: $100
+• 3 Aylık: $200  
+• Sınırsız: $500
+"""
+    bot.reply_to(message, welcome_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['scan'])
+def handle_scan(message):
+    """Tarama komutu"""
+    user_id = message.from_user.id
+    
+    # Lisans kontrolü
+    success, result = license_manager.check_license_status()
+    if not success:
+        bot.reply_to(message, f"❌ {result}")
+        return
+    
+    bot.reply_to(message, "🚀 TARAMA BAŞLATILIYOR\n⏱️ Yaklaşık 3-5 dakika içerisinde uygun işlemler gösterilecek...")
+
+@bot.message_handler(commands=['status'])
+def handle_status(message):
+    """Durum komutu"""
+    user_id = message.from_user.id
+    
+    # Lisans kontrolü
+    success, result = license_manager.check_license_status()
+    if not success:
+        bot.reply_to(message, f"❌ {result}")
+        return
+    
+    bot.reply_to(message, "✅ Bot çalışıyor ve lisansınız aktif!")
+
+@bot.message_handler(commands=['help'])
+def handle_help(message):
+    """Yardım komutu"""
+    help_text = """
+🤖 **Sniper Crypto Bot Komutları:**
+
+/start - Bot'u başlat
+/scan - Coin taraması yap
+/status - Bot durumu
+/help - Bu yardım mesajı
+/test - Test komutu
+"""
+    bot.reply_to(message, help_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['test'])
+def handle_test(message):
+    """Test komutu"""
+    bot.reply_to(message, "✅ Bot çalışıyor!")
+
+@bot.message_handler(func=lambda message: True)
+def handle_all_messages(message):
+    """Tüm mesajları işle"""
+    user_id = message.from_user.id
+    text = message.text.strip()
+    
+    print(f"📨 Gelen mesaj: {text} (User: {user_id})")
+    
+    # Kullanıcı durumunu kontrol et
+    if user_id not in user_states:
+        user_states[user_id] = "waiting_license"
+    
+    if user_states[user_id] == "waiting_license":
+        # Lisans anahtarı bekleniyor
+        print(f"🔍 Lisans kontrol ediliyor: {text}")
+        
+        # Lisans doğrulama
+        success, result = license_manager.validate_license(text)
+        
+        if success:
+            print(f"✅ Lisans geçerli: {text}")
+            user_states[user_id] = "licensed"
+            bot.reply_to(message, f"✅ **Lisans Geçerli!**\n\n🎯 Artık bot'u kullanabilirsiniz!\n\nKomutlar:\n/scan - Tarama yap\n/status - Durum kontrolü\n/help - Yardım")
+        else:
+            print(f"❌ Lisans geçersiz: {text}")
+            bot.reply_to(message, f"❌ **Yanlış Lisans Anahtarı!**\n\n🔑 **Gönderilen:** {text}\n\n❗ **Bu lisans anahtarı geçersiz!**\n\n💬 **Lisans Satın Almak İçin:**\n@ApfelTradingAdmin ile iletişime geçin.\n\n📦 **Paketler:**\n• 1 Aylık: $100\n• 3 Aylık: $200\n• Sınırsız: $500\n\n🔑 **Tekrar denemek için lisans anahtarınızı gönderin:**")
+    else:
+        # Lisanslı kullanıcı
+        bot.reply_to(message, "✅ Lisansınız aktif! /scan komutu ile tarama yapabilirsiniz.")
+
+def run_telegram_bot():
+    """Telegram bot'u çalıştır"""
+    print("🚀 Telegram Bot başlatılıyor...")
+    print(f"📱 Bot Token: {BOT_TOKEN[:20]}...")
+    
+    try:
+        # Webhook'u temizle
+        bot.remove_webhook()
+        
+        print("📱 Bot polling başlatılıyor...")
+        bot.polling(none_stop=True, interval=1, timeout=60)
+    except Exception as e:
+        print(f"❌ Bot hatası: {e}")
+        # Hata durumunda tekrar dene
+        import time
+        time.sleep(5)
+        run_telegram_bot()
+
 if __name__ == '__main__':
-    # Sadece Flask uygulamasını başlat, bot'u otomatik başlatma
+    # Flask ve Telegram bot'u aynı anda çalıştır
+    import threading
+    
+    # Telegram bot'u ayrı thread'de başlat
+    bot_thread = threading.Thread(target=run_telegram_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    
+    # Flask uygulamasını başlat
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False) 
