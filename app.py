@@ -536,16 +536,22 @@ def run_telegram_bot():
     print(f"📱 Bot Token: {BOT_TOKEN[:20]}...")
     
     try:
-        # Webhook'u temizle
+        # Webhook'u temizle ve eski güncellemeleri temizle
         bot.remove_webhook()
         
+        # Eski güncellemeleri temizle
+        try:
+            bot.get_updates(offset=-1)
+        except:
+            pass
+        
         print("📱 Bot polling başlatılıyor...")
-        bot.polling(none_stop=True, interval=1, timeout=60)
+        bot.polling(none_stop=True, interval=3, timeout=30, long_polling_timeout=30)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         # Hata durumunda tekrar dene
         import time
-        time.sleep(5)
+        time.sleep(10)
         run_telegram_bot()
 
 if __name__ == '__main__':
