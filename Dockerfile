@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8080
 
 # Uygulamayı çalıştır - Yeni bot token ile
-CMD ["sh", "-c", "killall python || true && pkill -f python || true && sleep 15 && python app.py"] 
+CMD ["sh", "-c", "pkill -f python || true && sleep 20 && python app.py"] 

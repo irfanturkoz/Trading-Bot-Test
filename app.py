@@ -37,6 +37,9 @@ user_states = {}
 # İşlenen mesajları takip et
 processed_messages = set()
 
+# Son işlenen mesaj zamanı
+last_message_time = {}
+
 def run_bot_analysis():
     """Bot analizini ayrı thread'de çalıştır"""
     global bot_status
@@ -509,18 +512,31 @@ def handle_all_messages(message):
     user_id = message.from_user.id
     text = message.text.strip()
     message_id = message.message_id
+    current_time = time.time()
     
     # Mesaj daha önce işlendiyse tekrar işleme
     if message_id in processed_messages:
         print(f"⏭️ Mesaj zaten işlendi: {message_id}")
         return
     
+    # Aynı kullanıcıdan çok hızlı gelen mesajları engelle
+    if user_id in last_message_time:
+        time_diff = current_time - last_message_time[user_id]
+        if time_diff < 2:  # 2 saniye içinde gelen mesajları engelle
+            print(f"⏭️ Çok hızlı mesaj engellendi: {user_id} ({time_diff:.1f}s)")
+            return
+    
     # Mesajı işlenmiş olarak işaretle
     processed_messages.add(message_id)
+    last_message_time[user_id] = current_time
     
     # İşlenen mesaj sayısını sınırla (bellek tasarrufu için)
     if len(processed_messages) > 1000:
         processed_messages.clear()
+    
+    # Eski zaman kayıtlarını temizle (1 saat öncesi)
+    current_time = time.time()
+    last_message_time = {k: v for k, v in last_message_time.items() if current_time - v < 3600}
     
     print(f"📨 Gelen mesaj: {text} (User: {user_id}, ID: {message_id})")
     
@@ -555,26 +571,30 @@ def run_telegram_bot():
         # Webhook'u temizle
         bot.remove_webhook()
         
-        # Eski güncellemeleri temizle ve offset'i sıfırla
+        # Eski güncellemeleri tamamen temizle
         try:
-            updates = bot.get_updates(offset=-1)
+            # Tüm güncellemeleri al ve en son ID'yi bul
+            updates = bot.get_updates(offset=-1, limit=100)
             if updates:
                 last_update_id = updates[-1].update_id
+                # Son güncellemeden sonrasını al (yeni mesajlar için)
                 bot.get_updates(offset=last_update_id + 1)
-        except:
-            pass
+                print(f"✅ Eski güncellemeler temizlendi. Son ID: {last_update_id}")
+        except Exception as e:
+            print(f"⚠️ Güncelleme temizleme hatası: {e}")
         
-        # Bot polling'i başlatmadan önce kısa bir bekleme
+        # Bot polling'i başlatmadan önce uzun bekleme
         import time
-        time.sleep(10)
+        time.sleep(20)
         
         print("📱 Bot polling başlatılıyor...")
-        bot.polling(none_stop=True, interval=10, timeout=30, long_polling_timeout=30)
+        # Daha uzun interval ve timeout değerleri
+        bot.polling(none_stop=True, interval=15, timeout=45, long_polling_timeout=45)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
-        # Hata durumunda tekrar dene
+        # Hata durumunda daha uzun bekleme
         import time
-        time.sleep(30)
+        time.sleep(60)
         run_telegram_bot()
 
 if __name__ == '__main__':
