@@ -34,6 +34,9 @@ bot_status = {
 # Kullanıcı durumları
 user_states = {}
 
+# İşlenen mesajları takip et
+processed_messages = set()
+
 def run_bot_analysis():
     """Bot analizini ayrı thread'de çalıştır"""
     global bot_status
@@ -505,8 +508,21 @@ def handle_all_messages(message):
     """Tüm mesajları işle"""
     user_id = message.from_user.id
     text = message.text.strip()
+    message_id = message.message_id
     
-    print(f"📨 Gelen mesaj: {text} (User: {user_id})")
+    # Mesaj daha önce işlendiyse tekrar işleme
+    if message_id in processed_messages:
+        print(f"⏭️ Mesaj zaten işlendi: {message_id}")
+        return
+    
+    # Mesajı işlenmiş olarak işaretle
+    processed_messages.add(message_id)
+    
+    # İşlenen mesaj sayısını sınırla (bellek tasarrufu için)
+    if len(processed_messages) > 1000:
+        processed_messages.clear()
+    
+    print(f"📨 Gelen mesaj: {text} (User: {user_id}, ID: {message_id})")
     
     # Kullanıcı durumunu kontrol et
     if user_id not in user_states:
@@ -539,23 +555,26 @@ def run_telegram_bot():
         # Webhook'u temizle
         bot.remove_webhook()
         
-        # Eski güncellemeleri temizle
+        # Eski güncellemeleri temizle ve offset'i sıfırla
         try:
-            bot.get_updates(offset=-1)
+            updates = bot.get_updates(offset=-1)
+            if updates:
+                last_update_id = updates[-1].update_id
+                bot.get_updates(offset=last_update_id + 1)
         except:
             pass
         
         # Bot polling'i başlatmadan önce kısa bir bekleme
         import time
-        time.sleep(5)
+        time.sleep(10)
         
         print("📱 Bot polling başlatılıyor...")
-        bot.polling(none_stop=True, interval=5, timeout=20, long_polling_timeout=20)
+        bot.polling(none_stop=True, interval=10, timeout=30, long_polling_timeout=30)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         # Hata durumunda tekrar dene
         import time
-        time.sleep(15)
+        time.sleep(30)
         run_telegram_bot()
 
 if __name__ == '__main__':
