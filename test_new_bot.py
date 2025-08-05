@@ -1,28 +1,39 @@
-import os
 import requests
 
-print("🔍 Yeni Bot Test")
-print("=" * 30)
+# Yeni bot token'ını test et
+BOT_TOKEN = "8259350638:AAEvnwmHddZ2raKa8bXYYxRG4U3kD0tdjZY"
 
-# Yeni bot token'ı (geçici)
-NEW_BOT_TOKEN = "8243806452:AAErJkMJ9yDEL3IDGFN_ayQHnXQhHkiA-YE"
-
-print(f"📝 Token: {NEW_BOT_TOKEN[:20]}...")
-
-# Telegram API'ye test isteği gönder
-url = f"https://api.telegram.org/bot{NEW_BOT_TOKEN}/getMe"
-
-try:
-    response = requests.get(url)
-    print(f"📡 Status: {response.status_code}")
-    print(f"📝 Response: {response.text}")
+def test_bot_token():
+    """Bot token'ını test et"""
+    print("🔍 Yeni Bot Token Testi")
+    print(f"📝 Token: {BOT_TOKEN[:20]}...")
     
-    if response.status_code == 200:
-        print("✅ Token geçerli!")
-    else:
-        print("❌ Token geçersiz!")
+    # Bot bilgilerini al
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/getMe"
+    
+    try:
+        response = requests.get(url)
+        print(f"📡 Status: {response.status_code}")
+        print(f"📝 Response: {response.text}")
         
-except Exception as e:
-    print(f"❌ Hata: {e}")
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('ok'):
+                bot_info = data['result']
+                print(f"✅ Token geçerli!")
+                print(f"🤖 Bot: @{bot_info['username']}")
+                print(f"📝 Name: {bot_info['first_name']}")
+                return True
+            else:
+                print(f"❌ Token geçersiz: {data.get('description', 'Bilinmeyen hata')}")
+                return False
+        else:
+            print(f"❌ HTTP Hatası: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Bağlantı hatası: {e}")
+        return False
 
-print("✅ Test tamamlandı!") 
+if __name__ == "__main__":
+    test_bot_token() 
