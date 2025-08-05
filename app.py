@@ -609,61 +609,36 @@ def run_telegram_bot():
     print("🚀 Telegram Bot başlatılıyor...")
     print(f"📱 Bot Token: {BOT_TOKEN[:20]}...")
     
-    # Tek instance garantisi için PID dosyası
-    pid_file = "/tmp/bot.pid"
+    # Railway'de tek instance garantisi
     import os
+    import time
     
-    # Eğer PID dosyası varsa ve process çalışıyorsa çık
-    if os.path.exists(pid_file):
-        try:
-            with open(pid_file, 'r') as f:
-                old_pid = int(f.read().strip())
-            # Process'in çalışıp çalışmadığını kontrol et
-            os.kill(old_pid, 0)  # Signal 0 = process kontrolü
-            print(f"⚠️ Bot zaten çalışıyor (PID: {old_pid})")
-            return
-        except (OSError, ValueError):
-            pass  # Process çalışmıyor, devam et
-    
-    # PID dosyasını oluştur
-    with open(pid_file, 'w') as f:
-        f.write(str(os.getpid()))
+    # Önce tüm eski process'leri temizle
+    os.system("pkill -9 -f 'python.*app.py' 2>/dev/null || true")
+    os.system("pkill -9 -f 'telebot' 2>/dev/null || true")
+    time.sleep(15)
     
     try:
         # Webhook'u temizle
         bot.remove_webhook()
         
-        # Eski güncellemeleri tamamen temizle
+        # Tüm güncellemeleri temizle
         try:
-            # Tüm güncellemeleri al ve en son ID'yi bul
-            updates = bot.get_updates(offset=-1, limit=100)
-            if updates:
-                last_update_id = updates[-1].update_id
-                # Son güncellemeden sonrasını al (yeni mesajlar için)
-                bot.get_updates(offset=last_update_id + 1)
-                print(f"✅ Eski güncellemeler temizlendi. Son ID: {last_update_id}")
+            bot.get_updates(offset=-1)
+            print("✅ Tüm eski güncellemeler temizlendi")
         except Exception as e:
             print(f"⚠️ Güncelleme temizleme hatası: {e}")
         
-        # Bot polling'i başlatmadan önce uzun bekleme
-        import time
-        time.sleep(30)
+        # Daha uzun bekleme
+        time.sleep(60)
         
         print("📱 Bot polling başlatılıyor...")
-        # Daha uzun interval ve timeout değerleri
-        bot.polling(none_stop=True, interval=20, timeout=60, long_polling_timeout=60)
+        # Çok uzun interval ve timeout
+        bot.polling(none_stop=True, interval=60, timeout=120, long_polling_timeout=120)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
-        # Hata durumunda daha uzun bekleme
-        import time
-        time.sleep(90)
+        time.sleep(300)
         run_telegram_bot()
-    finally:
-        # PID dosyasını temizle
-        try:
-            os.remove(pid_file)
-        except:
-            pass
 
 if __name__ == '__main__':
     # Flask ve Telegram bot'u aynı anda çalıştır
