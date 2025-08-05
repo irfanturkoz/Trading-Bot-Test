@@ -522,7 +522,7 @@ def handle_all_messages(message):
     # Aynı kullanıcıdan çok hızlı gelen mesajları engelle
     if user_id in last_message_time:
         time_diff = current_time - last_message_time[user_id]
-        if time_diff < 2:  # 2 saniye içinde gelen mesajları engelle
+        if time_diff < 5:  # 5 saniye içinde gelen mesajları engelle
             print(f"⏭️ Çok hızlı mesaj engellendi: {user_id} ({time_diff:.1f}s)")
             return
     
@@ -567,6 +567,26 @@ def run_telegram_bot():
     print("🚀 Telegram Bot başlatılıyor...")
     print(f"📱 Bot Token: {BOT_TOKEN[:20]}...")
     
+    # Tek instance garantisi için PID dosyası
+    pid_file = "/tmp/bot.pid"
+    import os
+    
+    # Eğer PID dosyası varsa ve process çalışıyorsa çık
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file, 'r') as f:
+                old_pid = int(f.read().strip())
+            # Process'in çalışıp çalışmadığını kontrol et
+            os.kill(old_pid, 0)  # Signal 0 = process kontrolü
+            print(f"⚠️ Bot zaten çalışıyor (PID: {old_pid})")
+            return
+        except (OSError, ValueError):
+            pass  # Process çalışmıyor, devam et
+    
+    # PID dosyasını oluştur
+    with open(pid_file, 'w') as f:
+        f.write(str(os.getpid()))
+    
     try:
         # Webhook'u temizle
         bot.remove_webhook()
@@ -585,17 +605,23 @@ def run_telegram_bot():
         
         # Bot polling'i başlatmadan önce uzun bekleme
         import time
-        time.sleep(20)
+        time.sleep(30)
         
         print("📱 Bot polling başlatılıyor...")
         # Daha uzun interval ve timeout değerleri
-        bot.polling(none_stop=True, interval=15, timeout=45, long_polling_timeout=45)
+        bot.polling(none_stop=True, interval=20, timeout=60, long_polling_timeout=60)
     except Exception as e:
         print(f"❌ Bot hatası: {e}")
         # Hata durumunda daha uzun bekleme
         import time
-        time.sleep(60)
+        time.sleep(90)
         run_telegram_bot()
+    finally:
+        # PID dosyasını temizle
+        try:
+            os.remove(pid_file)
+        except:
+            pass
 
 if __name__ == '__main__':
     # Flask ve Telegram bot'u aynı anda çalıştır
