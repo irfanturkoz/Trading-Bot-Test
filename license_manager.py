@@ -87,7 +87,6 @@ class LicenseManager:
         
         print(f"🔍 Doğrulanan anahtar: {license_key}")
         print(f"📋 Mevcut anahtarlar: {list(self.valid_licenses.keys())}")
-        print(f"📋 Tüm lisanslar: {self.valid_licenses}")
         
         if license_key not in self.valid_licenses:
             print(f"❌ Lisans bulunamadı: {license_key}")
@@ -110,7 +109,7 @@ class LicenseManager:
             "activated_date": datetime.now().isoformat(),
             "expiry_date": None,
             "features": license_info.get("features", []),  # Eğer yoksa boş liste
-            "price": license_info["price"]
+            "price": license_info.get("price", 0)  # Eğer yoksa 0
         }
         
         # Süre hesapla (admin panel lisansları için duration alanı yok)

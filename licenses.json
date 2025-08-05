@@ -6,5 +6,13 @@
     "expiry_date": null,
     "active": true,
     "features": ["Temel Tarama", "Telegram Bildirimleri", "Formasyon Analizi"]
+  },
+  "292446CCD80AFA01": {
+    "type": "monthly",
+    "price": 100,
+    "activated_date": "2025-08-05T16:00:00",
+    "expiry_date": null,
+    "active": true,
+    "features": ["Temel Tarama", "Telegram Bildirimleri", "Formasyon Analizi"]
   }
 }
