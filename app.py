@@ -321,6 +321,14 @@ def add_license():
         with open('licenses.json', 'w') as f:
             json.dump(licenses, f, indent=2)
         
+        # Dosyaya yazıldığını doğrula
+        try:
+            with open('licenses.json', 'r') as f_read:
+                confirmed_licenses = json.load(f_read)
+            print(f"✅ licenses.json dosyasına yazıldı ve doğrulandı. İçerik: {list(confirmed_licenses.keys())}")
+        except Exception as e:
+            print(f"❌ licenses.json yazma doğrulama hatası: {e}")
+        
         print(f"✅ Lisans eklendi: {key[:8]}...")
         
         # Lisans yöneticisini yeniden yükle
@@ -406,6 +414,14 @@ def generate_license():
         
         with open('licenses.json', 'w') as f:
             json.dump(licenses, f, indent=2)
+        
+        # Dosyaya yazıldığını doğrula
+        try:
+            with open('licenses.json', 'r') as f_read:
+                confirmed_licenses = json.load(f_read)
+            print(f"✅ licenses.json dosyasına yazıldı ve doğrulandı. İçerik: {list(confirmed_licenses.keys())}")
+        except Exception as e:
+            print(f"❌ licenses.json yazma doğrulama hatası: {e}")
         
         print(f"✅ Otomatik lisans oluşturuldu: {license_key}")
         print(f"📋 Lisans bilgileri: {license_info}")

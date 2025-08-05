@@ -190,7 +190,7 @@ class LicenseManager:
                 print(f"❌ Lisans bulunamadı: {license_key}")
                 print(f"🔍 Aranan anahtar: '{license_key}'")
                 print(f"📋 Memory'deki anahtarlar: {[repr(k) for k in self.valid_licenses.keys()]}")
-                print(f"📋 Dosyadaki anahtarlar: {[repr(k) for k in file_licenses.keys()]}")
+                print(f"📋 Dosyadaki tüm lisanslar (detaylı): {file_licenses}")
                 return False, "Geçersiz lisans anahtarı!"
                 
         except Exception as e:
