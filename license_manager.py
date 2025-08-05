@@ -87,6 +87,7 @@ class LicenseManager:
         
         print(f"🔍 Doğrulanan anahtar: {license_key}")
         print(f"📋 Mevcut anahtarlar: {list(self.valid_licenses.keys())}")
+        print(f"📋 Tüm lisanslar: {self.valid_licenses}")
         
         if license_key not in self.valid_licenses:
             print(f"❌ Lisans bulunamadı: {license_key}")
@@ -95,8 +96,8 @@ class LicenseManager:
         license_info = self.valid_licenses[license_key]
         print(f"✅ Lisans bulundu: {license_info}")
         
-        # Lisansın aktif olup olmadığını kontrol et
-        if not license_info.get('active', True):
+        # Lisansın aktif olup olmadığını kontrol et (admin panel lisansları için)
+        if 'active' in license_info and not license_info.get('active', True):
             print(f"❌ Lisans pasif: {license_key}")
             return False, "Lisans pasif durumda!"
         

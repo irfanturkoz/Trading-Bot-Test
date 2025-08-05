@@ -387,7 +387,8 @@ def generate_license():
         with open('licenses.json', 'w') as f:
             json.dump(licenses, f, indent=2)
         
-        print(f"✅ Otomatik lisans oluşturuldu: {license_key[:8]}...")
+        print(f"✅ Otomatik lisans oluşturuldu: {license_key}")
+        print(f"📋 Lisans bilgileri: {license_info}")
         
         return jsonify({
             'success': True, 
